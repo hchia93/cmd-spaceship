@@ -7,20 +7,20 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CmdSpaceship", "CmdSpaceshi
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
+		ClientRelease|x64 = ClientRelease|x64
+		ClientRelease|x86 = ClientRelease|x86
+		ServerRelease|x64 = ServerRelease|x64
+		ServerRelease|x86 = ServerRelease|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.Debug|x64.ActiveCfg = Debug|x64
-		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.Debug|x64.Build.0 = Debug|x64
-		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.Debug|x86.ActiveCfg = Debug|Win32
-		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.Debug|x86.Build.0 = Debug|Win32
-		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.Release|x64.ActiveCfg = Release|x64
-		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.Release|x64.Build.0 = Release|x64
-		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.Release|x86.ActiveCfg = Release|Win32
-		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.Release|x86.Build.0 = Release|Win32
+		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.ClientRelease|x64.ActiveCfg = ClientRelease|x64
+		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.ClientRelease|x64.Build.0 = ClientRelease|x64
+		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.ClientRelease|x86.ActiveCfg = ClientRelease|Win32
+		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.ClientRelease|x86.Build.0 = ClientRelease|Win32
+		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.ServerRelease|x64.ActiveCfg = ServerRelease|x64
+		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.ServerRelease|x64.Build.0 = ServerRelease|x64
+		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.ServerRelease|x86.ActiveCfg = ServerRelease|Win32
+		{1E4000B2-AFD7-45F8-B38D-2BF97E7806BF}.ServerRelease|x86.Build.0 = ServerRelease|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
