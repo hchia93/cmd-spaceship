@@ -48,15 +48,17 @@ void NetworkManager::TaskSend()
 {
 	
 #if SERVER
-	char buff[] = "Server";
-	buff[strlen(buff) + 1] = '/n';
+	char buff[DEFAULT_BUFLEN];
+	strcpy_s(buff, "Server");
+	//buff[strlen(buff) - 1] = '/n';
 #elif CLIENT
-	char buff[] = "Client";
-	buff[strlen(buff) + 1] = '/n';
+	char buff[DEFAULT_BUFLEN];
+	strcpy_s(buff, "Client");
+	//buff[strlen(buff) - 1] = '/n';
 #endif
 	const char* Data = buff;
 
-	printf("Sending %d character.../n", (int)strlen(Data));
+	printf("Sending %d character...\n", (int)strlen(Data));
 
 	while (true)
 	{
@@ -67,8 +69,9 @@ void NetworkManager::TaskSend()
 			if (ret > 0)
 			{
 				// Print locally.
-				NetworkTime = 0;
 			}
+
+			NetworkTime = 0;
 		}
 		auto finish = std::chrono::high_resolution_clock::now();
 
@@ -91,10 +94,10 @@ void NetworkManager::TaskReceive()
 			if (ret > 0)
 			{
 				//Received.
-				printf("%s", recvbuf);
-				NetworkTime = 0;
-
+				printf("%s\n", recvbuf);
 			}
+
+			NetworkTime = 0;
 		}
 		auto finish = std::chrono::high_resolution_clock::now();
 
@@ -191,7 +194,7 @@ int NetworkServer::Receive(const char* Context)
 	int ret = recv(ClientSocket, recvbuf, recvbuflen, 0);
 	if (ret > 0)
 	{
-		printf("%s", recvbuf);
+		printf("%s\n", recvbuf);
 	}
 	else if (ret == 0)
 	{
