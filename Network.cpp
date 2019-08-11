@@ -1,4 +1,5 @@
 #include <chrono>
+#include <mutex>
 #include "Network.h"
 #include "Inputs.h"
 
@@ -9,10 +10,10 @@ NetworkManager::NetworkManager(int argc, char** argv)
 #elif CLIENT
 	pNetwork = new NetworkClient();
 
+	/// Expecting Client to Run with additional parameter
+	/// Default : localhost
 	if (argc != 2) // Validate the parameters
-	{
 		printf("usage: %s server-name\n", argv[0]);
-	}
 
 	((NetworkClient*)pNetwork)->SetTarget(argv[1]);
 #endif
@@ -46,29 +47,26 @@ void NetworkManager::Init(InputManager* InputManager)
 
 void NetworkManager::TaskSend()
 {
-	
-#if SERVER
 	char buff[DEFAULT_BUFLEN];
-	strcpy_s(buff, "Server");
-	//buff[strlen(buff) - 1] = '/n';
-#elif CLIENT
-	char buff[DEFAULT_BUFLEN];
-	strcpy_s(buff, "Client");
-	//buff[strlen(buff) - 1] = '/n';
-#endif
 	const char* Data = buff;
-
-	printf("Sending %d character...\n", (int)strlen(Data));
 
 	while (true)
 	{
 		auto start = std::chrono::high_resolution_clock::now();
-		if (pNetwork && NetworkTime >= 0.5f)
+		if (pNetwork && pInputs && NetworkTime >= 0.5f)
 		{
-			int ret = pNetwork->Send(Data);
-			if (ret > 0)
+			// Read from Pending GameInput
+			if (auto PendingChar = pInputs->GetPendingGameInput())
 			{
-				// Print locally.
+				char key[1];
+				key[0] = *PendingChar;
+				strcpy_s(buff, sizeof(char), key);
+				int ret = pNetwork->Send(Data);
+				if (ret > 0)
+				{
+					key[0] = '\0';
+					pInputs->UpdateGameInputQueue();
+				}
 			}
 
 			NetworkTime = 0;

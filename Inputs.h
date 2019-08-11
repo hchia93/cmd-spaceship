@@ -1,5 +1,8 @@
 #pragma once
-#include <vector>
+#include <queue>
+#include <optional>
+#include <mutex>
+
 class InputManager
 {
 public:
@@ -7,9 +10,15 @@ public:
 	~InputManager();
 
 	void ListenUserInput();
+	void ListenUserInputLines();
+
+	std::optional<char> GetPendingGameInput();
+	void UpdateGameInputQueue();
 
 private: 
 	
-	std::vector<const char*> InputLines;
+	bool bChatMode = false;
+	std::queue<char>		PendingGameInput;
+	std::queue<const char*> PendingChatInput;
 };
 
