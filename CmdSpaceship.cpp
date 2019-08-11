@@ -7,16 +7,16 @@
 int main(int argc, char** argv)
 {
 	InputManager InputManager;
-	std::thread InputThread(&InputManager::ListenUserInput, InputManager);
-	std::thread ChatThread(&InputManager::ListenUserInputLines, InputManager);
+	std::thread InputThread(&InputManager::ListenUserInput, std::ref(InputManager));
+	std::thread ChatThread(&InputManager::ListenUserInputLines, std::ref(InputManager));
 
 	NetworkManager NetworkManager(argc, argv);
 	NetworkManager.Init(&InputManager);
 	if (!NetworkManager.IsInitialized())
 		return RESULT_ERROR;
 
-	std::thread NetworkReceiverThread(&NetworkManager::TaskReceive, NetworkManager);
-	std::thread NetworkSenderThread(&NetworkManager::TaskSend, NetworkManager);
+	std::thread NetworkReceiverThread(&NetworkManager::TaskReceive, std::ref(NetworkManager));
+	std::thread NetworkSenderThread(&NetworkManager::TaskSend, std::ref(NetworkManager));
 
 	InputThread.join();
 	ChatThread.detach();
