@@ -40,7 +40,7 @@ public:
 	void TaskSend(); //Run by threads
 	void TaskReceive(); // Run by threads.
 	void Send(const char* Context, int ID); 
-	void Receive(const char* Context, int ID);
+	void Receive(char* Context, int ID);
 
 
 	class NetworkCommon*	GetNetwork()		{ return pNetwork; }
@@ -58,7 +58,7 @@ public:
 	virtual int Initialize();
 	virtual int Setup()							{ return RESULT_NOT_SUPPORTED; };
 	virtual int Send(const char* Context)		{ return RESULT_NOT_SUPPORTED; };
-	virtual int Receive(const char* Context)	{ return RESULT_NOT_SUPPORTED; };
+	virtual int Receive(char* Context)	{ return RESULT_NOT_SUPPORTED; };
 	virtual int Shutdown()						{ return RESULT_NOT_SUPPORTED; };
 
 protected:
@@ -71,7 +71,7 @@ public:
 	virtual int Initialize() override;
 	virtual int Setup() override;
 	virtual int Send(const char* Context) override;
-	virtual int Receive(const char* Context) override;
+	virtual int Receive(char* Context) override;
 	virtual int Shutdown() override;
 	
 private:
@@ -87,7 +87,7 @@ public:
 	virtual int Initialize() override;
 	virtual int Setup() override;
 	virtual int Send(const char* Context) override;
-	virtual int Receive(const char* Context) override;
+	virtual int Receive(char* Context) override;
 	virtual int Shutdown() override;
 
 	void SetTarget(char* NewTarget)					{ Target = NewTarget; }		//	set ip as argument 1.

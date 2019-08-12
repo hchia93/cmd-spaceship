@@ -47,8 +47,7 @@ void NetworkManager::Init(InputManager* InputManager)
 
 void NetworkManager::TaskSend()
 {
-	char buff[DEFAULT_BUFLEN];
-	const char* Data = buff;
+	char Data[DEFAULT_BUFLEN];
 
 	while (true)
 	{
@@ -58,12 +57,12 @@ void NetworkManager::TaskSend()
 			// Read from Pending GameInput
 			if (std::optional<char> PendingChar = pInputs->GetPendingGameInput())
 			{
-				char key[1];
+				char key[2];
 				key[0] = *PendingChar;
-				//key[1] = '\0';
+				key[1] = '\0';
 				const char* source = key;
 
-				strcpy_s(buff, sizeof(source), source);
+				strcpy_s(Data, sizeof(source), source);
 				
 				int ret = pNetwork->Send(Data);
 				if (ret > 0)
@@ -84,18 +83,17 @@ void NetworkManager::TaskSend()
 void NetworkManager::TaskReceive()
 {
 	int ret;
-	char recvbuf[DEFAULT_BUFLEN];
+	char Data[DEFAULT_BUFLEN];
 
 	while (true)
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 		if (pNetwork && NetworkTime >= 0.02f)
 		{
-			ret = pNetwork->Receive(recvbuf);
+			ret = pNetwork->Receive(Data);
 			if (ret > 0)
 			{
-				//Received.
-				printf("%s", recvbuf);
+				printf("%s", Data);
 			}
 
 			NetworkTime = 0;
@@ -115,7 +113,7 @@ void NetworkManager::Send(const char * Context, int ID)
 		pNetwork->Send(Context);
 }
 
-void NetworkManager::Receive(const char* Context, int ID)
+void NetworkManager::Receive(char* Context, int ID)
 {
 	// This function is only used to send extra data with ID that needs to be handle.
 	// Will conflict with the main receive functions.
@@ -182,14 +180,14 @@ int NetworkServer::Send(const char* Context)
 	if (Context == nullptr)
 		return RESULT_ERROR;
 
-	int ret = send(ClientSocket, Context, (int)strlen(Context), 0);
+	int ret = send(ClientSocket, Context, (int)(strlen(Context) + 1), 0);
 	if (ret == SOCKET_ERROR)
 		printf("[Server] Send failed with error: %d\n", WSAGetLastError());
 	
 	return ret;
 }
 
-int NetworkServer::Receive(const char* Context)
+int NetworkServer::Receive(char* Context)
 {
 	char recvbuf[DEFAULT_BUFLEN];
 	int recvbuflen = DEFAULT_BUFLEN;
@@ -197,7 +195,7 @@ int NetworkServer::Receive(const char* Context)
 	int ret = recv(ClientSocket, recvbuf, recvbuflen, 0);
 	if (ret > 0)
 	{
-		printf("%s", recvbuf);
+		strcpy_s(Context, sizeof(recvbuf) , recvbuf);
 	}
 	else if (ret == 0)
 	{
@@ -312,22 +310,23 @@ int NetworkClient::Send(const char* Context)
 	if (Context == nullptr)
 		return RESULT_ERROR;
 
-	int ret = send(ConnectSocket, Context, (int)strlen(Context), 0);
+	//Send one more character to allow termnating character to be sent.
+	int ret = send(ConnectSocket, Context, (int)(strlen(Context)+1), 0);
 	if (ret == SOCKET_ERROR)
 		printf("[Client] Send failed with error: %d\n", WSAGetLastError());
 
 	return ret;
 }
 
-int NetworkClient::Receive(const char* Context)
+int NetworkClient::Receive(char* Context)
 {
 	char recvbuf[DEFAULT_BUFLEN];
 	int recvbuflen = DEFAULT_BUFLEN;
 
-	int ret = recv(ConnectSocket, recvbuf, 1 /*recvbuflen*/, 0);
+	int ret = recv(ConnectSocket, recvbuf, 2 /*recvbuflen*/, 0);
 	if (ret > 0)
 	{
-		printf("%s", recvbuf);
+		strcpy_s(Context, sizeof(recvbuf), recvbuf);
 	}
 	else if (ret == 0)
 	{
