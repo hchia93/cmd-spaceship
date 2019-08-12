@@ -1,5 +1,5 @@
 # CmdSpaceship
-(WIP) CmdSpaceship was a course I taken in Parallel Processing course with threads in Linux, now fully rewrite using C++ thread library and winsock.
+(WIP) CmdSpaceship was a course I taken in Parallel Processing course with threads in Linux, now fully rewrite using C++ thread library and winsock2.
 
 Project is still WIP, I will update in README.
 
