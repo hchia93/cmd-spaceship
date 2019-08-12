@@ -53,18 +53,21 @@ void NetworkManager::TaskSend()
 	while (true)
 	{
 		auto start = std::chrono::high_resolution_clock::now();
-		if (pNetwork && pInputs && NetworkTime >= 0.5f)
+		if (pNetwork && pInputs && NetworkTime >= 0.02f)
 		{
 			// Read from Pending GameInput
-			if (auto PendingChar = pInputs->GetPendingGameInput())
+			if (std::optional<char> PendingChar = pInputs->GetPendingGameInput())
 			{
 				char key[1];
 				key[0] = *PendingChar;
-				strcpy_s(buff, sizeof(char), key);
+				//key[1] = '\0';
+				const char* source = key;
+
+				strcpy_s(buff, sizeof(source), source);
+				
 				int ret = pNetwork->Send(Data);
 				if (ret > 0)
 				{
-					key[0] = '\0';
 					pInputs->UpdateGameInputQueue();
 				}
 			}
@@ -86,13 +89,13 @@ void NetworkManager::TaskReceive()
 	while (true)
 	{
 		auto start = std::chrono::high_resolution_clock::now();
-		if (pNetwork && NetworkTime >= 0.5f)
+		if (pNetwork && NetworkTime >= 0.02f)
 		{
 			ret = pNetwork->Receive(recvbuf);
 			if (ret > 0)
 			{
 				//Received.
-				printf("%s\n", recvbuf);
+				printf("%s", recvbuf);
 			}
 
 			NetworkTime = 0;
@@ -173,9 +176,12 @@ int NetworkServer::Setup()
 	return RESULT_SUCCEED;
 }
 
-int NetworkServer::Send(const char * Context)
+int NetworkServer::Send(const char* Context)
 {
-	// Echo the buffer back to the sender
+	// Why are you sending empty buffer?
+	if (Context == nullptr)
+		return RESULT_ERROR;
+
 	int ret = send(ClientSocket, Context, (int)strlen(Context), 0);
 	if (ret == SOCKET_ERROR)
 		printf("[Server] Send failed with error: %d\n", WSAGetLastError());
@@ -185,14 +191,13 @@ int NetworkServer::Send(const char * Context)
 
 int NetworkServer::Receive(const char* Context)
 {
-	//hyrex this is echo back code, it isn't suppose be here.
 	char recvbuf[DEFAULT_BUFLEN];
 	int recvbuflen = DEFAULT_BUFLEN;
 
 	int ret = recv(ClientSocket, recvbuf, recvbuflen, 0);
 	if (ret > 0)
 	{
-		printf("%s\n", recvbuf);
+		printf("%s", recvbuf);
 	}
 	else if (ret == 0)
 	{
@@ -304,7 +309,9 @@ int NetworkClient::Setup()
 
 int NetworkClient::Send(const char* Context)
 {
-	// Send an initial buffer
+	if (Context == nullptr)
+		return RESULT_ERROR;
+
 	int ret = send(ConnectSocket, Context, (int)strlen(Context), 0);
 	if (ret == SOCKET_ERROR)
 		printf("[Client] Send failed with error: %d\n", WSAGetLastError());
@@ -317,7 +324,7 @@ int NetworkClient::Receive(const char* Context)
 	char recvbuf[DEFAULT_BUFLEN];
 	int recvbuflen = DEFAULT_BUFLEN;
 
-	int ret = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+	int ret = recv(ConnectSocket, recvbuf, 1 /*recvbuflen*/, 0);
 	if (ret > 0)
 	{
 		printf("%s", recvbuf);

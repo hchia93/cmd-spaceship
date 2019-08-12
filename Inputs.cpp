@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <conio.h> // kbhit, MS-DOS specific now.
 #include "Inputs.h"
 
 static std::mutex InputMutex;
@@ -19,11 +19,15 @@ void InputManager::ListenUserInput()
 	while (true)
 	{
 		if (!bChatMode)
-		{
-			std::cin.get(keypress);
-			InputMutex.lock();
-			PendingGameInput.push(keypress);
-			InputMutex.unlock();
+		{	
+			if (_kbhit()) 
+			{
+				InputMutex.lock();
+				keypress = _getch();
+				PendingGameInput.push(keypress);
+				InputMutex.unlock();
+			}
+			//std::cin.get(keypress);
 		}
 	}
 }
