@@ -1,6 +1,10 @@
-#include <chrono>
-#include <mutex>
+
 #include "Network.h"
+
+#include <chrono>
+#include <sstream>
+#include <cassert>
+
 #include "Inputs.h"
 
 NetworkManager::NetworkManager(int argc, char** argv)
@@ -55,11 +59,12 @@ void NetworkManager::TaskSend()
 		if (pNetwork && pInputs && NetworkTime >= 0.02f)
 		{
 			// Read from Pending GameInput
-			if (std::optional<char> PendingChar = pInputs->GetPendingGameInput())
+			if (std::optional<char> PendingChar = pInputs->GetPendingGameInputToSend())
 			{
-				char key[2];
-				key[0] = *PendingChar;
-				key[1] = '\0';
+				char key[5];
+				GetNetStringToken(key, ENET_INPUT_CHANNEL);
+				key[3] = *PendingChar;
+				key[4] = '\0';
 				const char* source = key;
 
 				strcpy_s(Data, sizeof(source), source);
@@ -67,7 +72,7 @@ void NetworkManager::TaskSend()
 				int ret = pNetwork->Send(Data);
 				if (ret > 0)
 				{
-					pInputs->UpdateGameInputQueue();
+					pInputs->UpdatePendingSendGameInputQueue();
 				}
 			}
 
@@ -82,7 +87,6 @@ void NetworkManager::TaskSend()
 
 void NetworkManager::TaskReceive()
 {
-	int ret;
 	char Data[DEFAULT_BUFLEN];
 
 	while (true)
@@ -90,10 +94,28 @@ void NetworkManager::TaskReceive()
 		auto start = std::chrono::high_resolution_clock::now();
 		if (pNetwork && NetworkTime >= 0.02f)
 		{
-			ret = pNetwork->Receive(Data);
+			int ret = pNetwork->Receive(Data);
 			if (ret > 0)
 			{
-				printf("%s", Data);
+				// INPUT CHANNEL
+				if (Data[1] == '0')
+				{
+					if (pInputs)
+					{
+						pInputs->ReceiveRemoteGameInput(Data[3]);
+					}
+				}
+				else if (Data[1] == '1')
+				{
+					if (pInputs)
+					{
+						char BulletCoord[16]; // Copy to this one as the Data is mod
+						const char* coordData = BulletCoord;
+						strcpy_s(BulletCoord, 16, Data);
+						pInputs->ReceiveRemoteCoordinate(BulletCoord);
+					}
+						
+				}
 			}
 
 			NetworkTime = 0;
@@ -105,20 +127,36 @@ void NetworkManager::TaskReceive()
 	}
 }
 
-void NetworkManager::Send(const char * Context, int ID)
+void NetworkManager::Send(const char * Context, ENetChannel ID)
 {
-	// This function is only used to send extra data with ID that needs to be handle.
-	// Will conflict with the main send functions. 
+	assert(ID != 0); // Input handled by Threading Tick already, sending explicitly is not allowed.
+	
+	/// FIXME : Inifite sending.
 	if (pNetwork)
-		pNetwork->Send(Context);
+	{
+		char Data[DEFAULT_BUFLEN];
+		char Token[4];
+		GetNetStringToken(Token ,ID);
+		strcpy_s(Data, 4, Token); // Copy {token} first, then append context.
+
+		const char* ptr = Data;
+		strcpy_s(Data + 3, sizeof(Context), Context);
+
+		pNetwork->Send(Data);
+	}
+		
 }
 
-void NetworkManager::Receive(char* Context, int ID)
+void NetworkManager::GetNetStringToken(char* Destination, ENetChannel NetChannel)
 {
-	// This function is only used to send extra data with ID that needs to be handle.
-	// Will conflict with the main receive functions.
-	if (pNetwork)
-		pNetwork->Receive(Context);
+	if (Destination == nullptr)
+		return;
+
+	std::stringstream ss;
+	ss << (int)NetChannel;
+	std::string token = "{" + ss.str() + "}";
+
+	strcpy_s(Destination, 4 , token.c_str());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -323,7 +361,7 @@ int NetworkClient::Receive(char* Context)
 	char recvbuf[DEFAULT_BUFLEN];
 	int recvbuflen = DEFAULT_BUFLEN;
 
-	int ret = recv(ConnectSocket, recvbuf, 2 /*recvbuflen*/, 0);
+	int ret = recv(ConnectSocket, recvbuf, recvbuflen, 0);
 	if (ret > 0)
 	{
 		strcpy_s(Context, sizeof(recvbuf), recvbuf);

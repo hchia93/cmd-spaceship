@@ -1,35 +1,29 @@
 #pragma once
 
-#include <string>
-#include "Interface.h"
+#include <vector>
 #include "Utils.h"
 
-class Spaceship : public ITickable, public IMovable, public IGameEventHandler
+class Bullet;
+
+class Spaceship
 {
 public:
 	Spaceship();
 	~Spaceship();
 
-	//IMovable
-	virtual void Move() override;
-	//~IMovable
+	Bullet*										Shoot();
 
-	//ITickable
-	virtual void Tick(float deltaTime) override;
-	//~ITickable
+	FLocation2D									GetLocation() const { return CurrentLocation;  }
+	void										SetLocation(FLocation2D Location) { CurrentLocation = Location; CLAMP(CurrentLocation); }
+	static void									UpdatePool();
 
-	//IGameEventHandler
-	virtual void OnDispatchEvent(const void* Object, EGameEvent Event) override;
-	virtual void OnReceiveEvent(const void* Object, EGameEvent Event) override;
-	//IGameEventHandler
-
-	void SetPlayerName(std::string Name) { PlayerName = Name; }
-	void Shoot() {};
+	static bool									FindLocalBullet(int row, int col);
+	static bool									FindRemoteBullet(int row, int col);
+	static std::vector<Bullet*>					SharedPool;
+	static void									KillPool();
 
 private:
-	FLocation2D		CurrentLocation;
-	EDirection      ForwardDirection;
-
-	std::string		PlayerName;
+	FLocation2D									CurrentLocation;
+	EDirection									ForwardDirection;
 };
 

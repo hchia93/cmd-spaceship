@@ -18,6 +18,7 @@
 #include <ws2tcpip.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string>
 #include "Utils.h"
 
 #pragma comment (lib, "Ws2_32.lib") // Need to link with Ws2_32.lib
@@ -28,8 +29,21 @@
 #pragma comment (lib, "AdvApi32.lib")
 #endif
 
+#define RESULT_SUCCEED 0 
+#define RESULT_ERROR 1
+#define RESULT_NOT_SUPPORTED 2
+
 class NetworkCommon;
 class InputManager;
+
+
+enum ENetChannel
+{
+	ENET_INPUT_CHANNEL,	// Sending WASD Input, Single key only. {0}x\0 = 5 char
+	ENET_BULLET_CHANNEL,	// Sending Bullet Coord, {1} ... = 128 max char
+	ENET_NAME_CHANNEL,	// Request Player Name, {2}... = 16 max char
+	ENET_EVENT_CHANNEL,	// Broadcast an event. {3}... = 16 max char
+};
 
 class NetworkManager
 {
@@ -39,15 +53,17 @@ public:
 	void Init(InputManager* InputManager);
 	void TaskSend(); //Run by threads
 	void TaskReceive(); // Run by threads.
-	void Send(const char* Context, int ID); 
-	void Receive(char* Context, int ID);
+	void Send(const char* Context, ENetChannel ID);
 
 
 	class NetworkCommon*	GetNetwork()		{ return pNetwork; }
 	bool					IsInitialized()		{ return bInitialized; }
 private:
-	NetworkCommon*			pNetwork;
-	InputManager*			pInputs;
+
+	static void				GetNetStringToken(char* Destination, ENetChannel NetChannel);
+
+	NetworkCommon*			pNetwork;			// Directly owned.
+	InputManager*			pInputs;			// Cache only
 	bool					bInitialized = false;
 	double					NetworkTime = 0;
 };
@@ -58,7 +74,7 @@ public:
 	virtual int Initialize();
 	virtual int Setup()							{ return RESULT_NOT_SUPPORTED; };
 	virtual int Send(const char* Context)		{ return RESULT_NOT_SUPPORTED; };
-	virtual int Receive(char* Context)	{ return RESULT_NOT_SUPPORTED; };
+	virtual int Receive(char* Context)			{ return RESULT_NOT_SUPPORTED; };
 	virtual int Shutdown()						{ return RESULT_NOT_SUPPORTED; };
 
 protected:

@@ -1,7 +1,6 @@
 #pragma once
 #include <queue>
 #include <optional>
-#include <mutex>
 
 class InputManager
 {
@@ -9,16 +8,31 @@ public:
 	InputManager();
 	~InputManager();
 
-	void ListenUserInput();
-	void ListenUserInputLines();
+	// Helper function to send to network thread.
+	std::optional<char> GetPendingGameInputToSend();
+	void UpdatePendingSendGameInputQueue();
 
-	std::optional<char> GetPendingGameInput();
-	void UpdateGameInputQueue();
+	// Helper function to send to game to handle (Local)
+	void ReceiveRemoteGameInput(char Key); // push
+	void ReceiveLocalGameInput(char Key); // push
+	std::optional<char> GetLocalPendingInput(); // get
+	std::optional<char> GetRemotePendingInput(); // get
+	void UpdateLocalInputQueue(); // pop
+	void UpdateRemoteInputQueue(); // pop
+
+	// Diplay Bullet Fire Position from Another Person perspective
+	void ReceiveRemoteCoordinate(const char* Data);
+	std::optional<const char*> GetCoordBuffer();
+	void UpdateCoordBufferQueue();
+	
+	bool bKbhit = false;
 
 private: 
 	
-	bool bChatMode = false;
-	std::queue<char>		PendingGameInput;
-	std::queue<const char*> PendingChatInput;
+	std::queue<char>		PendingGameInputToSend;
+	std::queue<char>		PendingLocalGameInput;
+	std::queue<char>		PendingRemoteGameInput;
+
+	std::queue<const char*> CoordBuffer;
 };
 
