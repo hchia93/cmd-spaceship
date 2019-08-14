@@ -25,7 +25,8 @@ public:
 	std::optional<const char*> GetCoordBuffer();
 	void UpdateCoordBufferQueue();
 	
-	bool bKbhit = false;
+	bool bHasWinner = false;
+	bool bLoseFlag = false;
 
 private: 
 	

@@ -55,7 +55,7 @@ void NetworkManager::TaskSend()
 
 	while (true)
 	{
-		auto start = std::chrono::high_resolution_clock::now();
+		auto start = std::chrono::steady_clock::now();
 		if (pNetwork && pInputs && NetworkTime >= 0.02f)
 		{
 			// Read from Pending GameInput
@@ -78,7 +78,7 @@ void NetworkManager::TaskSend()
 
 			NetworkTime = 0;
 		}
-		auto finish = std::chrono::high_resolution_clock::now();
+		auto finish = std::chrono::steady_clock::now();
 
 		std::chrono::duration<double> elapsed = finish - start;
 		NetworkTime += elapsed.count();
@@ -91,8 +91,8 @@ void NetworkManager::TaskReceive()
 
 	while (true)
 	{
-		auto start = std::chrono::high_resolution_clock::now();
-		if (pNetwork && NetworkTime >= 0.02f)
+		auto start = std::chrono::steady_clock::now();
+		if (pNetwork && NetworkTime >= 0.00000002f)
 		{
 			int ret = pNetwork->Receive(Data);
 			if (ret > 0)
@@ -116,11 +116,20 @@ void NetworkManager::TaskReceive()
 					}
 						
 				}
+				else if (Data[1] == '2')
+				{
+					if (pInputs)
+					{
+						pInputs->bHasWinner = true;
+						pInputs->bLoseFlag = true;
+					}
+						
+				}
 			}
 
 			NetworkTime = 0;
 		}
-		auto finish = std::chrono::high_resolution_clock::now();
+		auto finish = std::chrono::steady_clock::now();
 
 		std::chrono::duration<double> elapsed = finish - start;
 		NetworkTime += elapsed.count();

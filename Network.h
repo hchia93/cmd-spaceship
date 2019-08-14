@@ -41,7 +41,7 @@ enum ENetChannel
 {
 	ENET_INPUT_CHANNEL,	// Sending WASD Input, Single key only. {0}x\0 = 5 char
 	ENET_BULLET_CHANNEL,	// Sending Bullet Coord, {1} ... = 128 max char
-	ENET_NAME_CHANNEL,	// Request Player Name, {2}... = 16 max char
+	ENET_WINNER_CHANNEL,	
 	ENET_EVENT_CHANNEL,	// Broadcast an event. {3}... = 16 max char
 };
 

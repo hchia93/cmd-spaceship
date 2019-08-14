@@ -6,6 +6,12 @@
 #define CLAMP_RANGE(x, Min, Max)  x = ((x) < Min) ?  Min : ((x) > Max) ? Max : (x);
 #define CLAMP(Location) CLAMP_RANGE(Location.X, 2 ,SCREEN_X_MAX-3) CLAMP_RANGE(Location.Y, 1, SCREEN_Y_MAX-2)
 
+struct FHitResult
+{
+	bool bHitRemotePlayer = false;
+	bool bHitBullet = false;
+};
+
 struct FLocation2D
 {
 	int X;

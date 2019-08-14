@@ -1,6 +1,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <chrono>
 #include <conio.h> // kbhit, MS-DOS specific now.
 
 #include "Game.h"
@@ -65,6 +66,7 @@ void Game::Init(InputManager* InputManager, NetworkManager* NetworkManager)
 
 void Game::Update()
 {
+	
 	if (!LocalPlayer || !RemotePlayer)
 		return;
 
@@ -89,21 +91,23 @@ void Game::Update()
 		else if (key == 'w')
 		{
 			// Local Shoot
-			Bullet* pBullet = LocalPlayer->Shoot();
-			if (pBullet)
+			if (!pInputs->bHasWinner)
 			{
-				pBullet->SetForwardDirection(EDR_Up);
-				pBullet->Activate(LocalPlayer->GetLocation() + FLocation2D(0, 1), LocalPlayer.get());
-	
-			}
+				Bullet* pBullet = LocalPlayer->Shoot();
+				if (pBullet)
+				{
+					pBullet->SetForwardDirection(EDR_Up);
+					pBullet->Activate(LocalPlayer->GetLocation() + FLocation2D(0, -2), LocalPlayer.get());
 
-			// Notify a remote Shoot
-			if (pNetwork)
-			{
-				const char* Location = LocalPlayer->GetLocation().ToString();
-				pNetwork->Send(Location, ENetChannel::ENET_BULLET_CHANNEL);
-			}
+				}
 
+				// Notify a remote Shoot
+				if (pNetwork)
+				{
+					const char* Location = LocalPlayer->GetLocation().ToString();
+					pNetwork->Send(Location, ENetChannel::ENET_BULLET_CHANNEL);
+				}
+			}
 		}
 		else if (key == 'd')
 		{
@@ -127,7 +131,7 @@ void Game::Update()
 			if (pBullet)
 			{
 				pBullet->SetForwardDirection(EDR_Down);
-				pBullet->Activate(RemotePlayer->GetLocation() + FLocation2D(0, -1), RemotePlayer.get());
+				pBullet->Activate(RemotePlayer->GetLocation() + FLocation2D(0, +2), RemotePlayer.get());
 
 			}
 		}
@@ -138,10 +142,47 @@ void Game::Update()
 		pInputs->UpdateRemoteInputQueue();
 	}
 
-	Spaceship::UpdatePool();
-		
+	// Stop rechecks if a hit to player has been made. (This flag is from local or remote.
+	if (!pInputs->bHasWinner)
+	{
+		auto start = std::chrono::steady_clock::now();
+
+		if (UpdateTime >= 0.00000002f)
+		{
+			// Update all bullet positions.
+			Spaceship::UpdatePool();
+			FHitResult HitResult = Spaceship::CheckHit(RemotePlayer.get());
+
+			if (HitResult.bHitRemotePlayer)
+			{
+				SetCursorPostion(0, SCREEN_Y_MAX);
+				printf("You hit the enemy. You won.");
+
+				pInputs->bHasWinner = true; // local. remote will get set later
+
+				if (pNetwork)
+					pNetwork->Send("", ENET_WINNER_CHANNEL);
+			}
+
+			UpdateTime = 0;
+
+		}
+		auto finish = std::chrono::steady_clock::now();
+		std::chrono::duration<long double> elapsed = finish - start;
+		UpdateTime += elapsed.count();
+
+		SetCursorPostion(0, SCREEN_Y_MAX + 17);
+		printf("delta time = %.14f", UpdateTime);
+	}
+	
 	Draw();
 	DrawRecvData();
+
+	if (pInputs->bHasWinner && pInputs->bLoseFlag)
+	{
+		SetCursorPostion(0, SCREEN_Y_MAX);
+		printf("Enemy Wins. You Lose.");
+	}
 }
 
 void Game::Draw()
@@ -200,12 +241,12 @@ void Game::Draw()
 				printf("A");
 			else if (bHeadRemote)
 				printf("V");
-			else if (bWarZone)
-				printf(" ");
 			else if (bBulletLocal)
 				printf("o");
 			else if (bBulletRemote)
 				printf("x");
+			else if (bWarZone)
+				printf(" ");
 			else
 				printf("#");
 		}
@@ -215,11 +256,11 @@ void Game::Draw()
 
 void Game::DrawRecvData()
 {
-	SetCursorPostion(0, SCREEN_Y_MAX + BufferLineCounter);
+	SetCursorPostion(0, SCREEN_Y_MAX + 5 +BufferLineCounter);
 	printf("%20s", " ");
 	if (pInputs && pInputs->GetCoordBuffer())
 	{
-		SetCursorPostion(0, SCREEN_Y_MAX + BufferLineCounter);
+		SetCursorPostion(0, SCREEN_Y_MAX + 5 + BufferLineCounter);
 		printf("%s", pInputs->GetCoordBuffer().value());
 		BufferLineCounter++;
 		pInputs->UpdateCoordBufferQueue();

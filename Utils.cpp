@@ -1,6 +1,8 @@
 #include "Utils.h"
 #include <sstream>
 
+// https://www.systutorials.com/131/convert-string-to-int-and-reverse/
+
 const char* FLocation2D::ToString()
 {
 	std::stringstream ssx;

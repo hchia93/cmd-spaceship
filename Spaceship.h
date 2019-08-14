@@ -16,6 +16,7 @@ public:
 	FLocation2D									GetLocation() const { return CurrentLocation;  }
 	void										SetLocation(FLocation2D Location) { CurrentLocation = Location; CLAMP(CurrentLocation); }
 	static void									UpdatePool();
+	static FHitResult							CheckHit(Spaceship* Othership);
 
 	static bool									FindLocalBullet(int row, int col);
 	static bool									FindRemoteBullet(int row, int col);

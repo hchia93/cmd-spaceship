@@ -39,7 +39,7 @@ void Spaceship::UpdatePool()
 			{
 				if (p->GetLocation().Y >= 0 && p->GetLocation().Y <= SCREEN_Y_MAX)
 				{
-					p->SetLocation(p->GetLocation() + FLocation2D(0, 1));
+					p->SetLocation(p->GetLocation() + FLocation2D(0, -1));
 				}
 				else
 				{
@@ -51,7 +51,7 @@ void Spaceship::UpdatePool()
 			{
 				if (p->GetLocation().Y >= 0 && p->GetLocation().Y <= SCREEN_Y_MAX)
 				{
-					p->SetLocation(p->GetLocation() + FLocation2D(0, -1));
+					p->SetLocation(p->GetLocation() + FLocation2D(0, +1));
 				}
 				else
 				{
@@ -62,11 +62,43 @@ void Spaceship::UpdatePool()
 	}
 }
 
+FHitResult Spaceship::CheckHit(Spaceship* Othership)
+{
+	FHitResult hit;
+	for (auto* p : SharedPool)
+	{
+		if (p && Othership && p->GetForwardDirection() == EDR_Up && p->IsActive())
+		{
+			FLocation2D bLoc = p->GetLocation();
+			FLocation2D sLoc = Othership->GetLocation();
+			if (bLoc == sLoc || bLoc == sLoc + FLocation2D(1, 0) || bLoc == sLoc + FLocation2D(-1, 0) || bLoc == sLoc + FLocation2D(0, 1))
+			{
+				p->Sleep();
+				hit.bHitRemotePlayer = true;
+			}
+		}
+
+		for (auto* q : SharedPool)
+		{
+			if (p && q)
+			{
+				if (p->GetLocation() == q->GetLocation() && p->IsActive() && q->IsActive() && p != q) //self collision remove!
+				{
+					hit.bHitBullet = true;
+					p->Sleep();
+					q->Sleep();
+				}
+			}
+		}
+	}
+	return hit;
+}
+
 bool Spaceship::FindLocalBullet(int row, int col)
 {
 	for (auto* p : SharedPool)
 	{
-		if (p && p->GetForwardDirection() == EDR_Up)
+		if (p && p->GetForwardDirection() == EDR_Up && p->IsActive())
 		{
 			if (FLocation2D::IsMatch(row, col, p->GetLocation()))
 				return true;
@@ -79,7 +111,7 @@ bool Spaceship::FindRemoteBullet(int row, int col)
 {
 	for (auto* p : SharedPool)
 	{
-		if (p && p->GetForwardDirection() == EDR_Down)
+		if (p && p->GetForwardDirection() == EDR_Down && p->IsActive())
 		{
 			if (FLocation2D::IsMatch(row, col, p->GetLocation()))
 				return true;
