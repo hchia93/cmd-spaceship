@@ -8,8 +8,6 @@ class Bullet;
 class Spaceship
 {
 public:
-	Spaceship();
-	~Spaceship();
 
 	Bullet*										Shoot();
 

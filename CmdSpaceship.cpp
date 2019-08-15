@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
 	Game SpaceshipGame;
 	SpaceshipGame.Init(&InputManager, &NetworkManager);
-	while (1)
+	while (!SpaceshipGame.bExit)
 		SpaceshipGame.Update();
 
 	NetworkReceiverThread.join();

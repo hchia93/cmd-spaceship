@@ -15,8 +15,8 @@ InputManager::~InputManager()
 
 std::optional<char> InputManager::GetPendingGameInputToSend()
 { 
-	InputMutex.lock();
 	char result;
+	InputMutex.lock();
 	if (PendingGameInputToSend.size() > 0)
 		result = PendingGameInputToSend.front();
 	InputMutex.unlock();
@@ -89,7 +89,7 @@ std::optional<const char*> InputManager::GetCoordBuffer()
 {
 	if (CoordBuffer.size() > 0)
 	{
-		return  CoordBuffer.front();
+		return CoordBuffer.front();
 	}
 	return {};
 }
@@ -102,7 +102,6 @@ void InputManager::UpdateCoordBufferQueue()
 void InputManager::UpdatePendingSendGameInputQueue()
 {
 	InputMutex.lock();
-	if (PendingGameInputToSend.size() > 0)
-		PendingGameInputToSend.pop();
+	PendingGameInputToSend.pop();
 	InputMutex.unlock();
 }

@@ -54,8 +54,6 @@ Game::Game()
 Game::~Game()
 {
 	Spaceship::KillPool();
-	LocalPlayer->~Spaceship();
-	RemotePlayer->~Spaceship();
 }
 
 void Game::Init(InputManager* InputManager, NetworkManager* NetworkManager)
@@ -66,91 +64,20 @@ void Game::Init(InputManager* InputManager, NetworkManager* NetworkManager)
 
 void Game::Update()
 {
-	
 	if (!LocalPlayer || !RemotePlayer)
 		return;
 
-	//  _kbhit and _getch is performance hit if it is on its seperate thread.
-	// Locals
-	if (_kbhit())
-	{
-		if (pInputs)
-		{
-			pInputs->ReceiveLocalGameInput(_getch());
-		}
-	}
-
-	if (pInputs && pInputs->GetLocalPendingInput())
-	{
-		char key = pInputs->GetLocalPendingInput().value(); // deref std::optional
-		if (key == 'a')
-		{
-			LocalPlayer->SetLocation(LocalPlayer->GetLocation() + FLocation2D(-1, 0));
-
-		}
-		else if (key == 'w')
-		{
-			// Local Shoot
-			if (!pInputs->bHasWinner)
-			{
-				Bullet* pBullet = LocalPlayer->Shoot();
-				if (pBullet)
-				{
-					pBullet->SetForwardDirection(EDR_Up);
-					pBullet->Activate(LocalPlayer->GetLocation() + FLocation2D(0, -2), LocalPlayer.get());
-
-				}
-
-				// Notify a remote Shoot
-				if (pNetwork)
-				{
-					const char* Location = LocalPlayer->GetLocation().ToString();
-					pNetwork->Send(Location, ENetChannel::ENET_BULLET_CHANNEL);
-				}
-			}
-		}
-		else if (key == 'd')
-		{
-			LocalPlayer->SetLocation(LocalPlayer->GetLocation() + FLocation2D(+1, 0));
-		}
-		pInputs->UpdateLocalInputQueue();
-	}
-	// Remote
-	if (pInputs && pInputs->GetRemotePendingInput())
-	{
-		char key = pInputs->GetRemotePendingInput().value(); // deref std::optional
-		if (key == 'a')
-		{
-			RemotePlayer->SetLocation(RemotePlayer->GetLocation() + FLocation2D(+1, 0));
-
-		}
-		else if (key == 'w')
-		{
-			// Simulated shoot.
-			Bullet* pBullet = RemotePlayer->Shoot();
-			if (pBullet)
-			{
-				pBullet->SetForwardDirection(EDR_Down);
-				pBullet->Activate(RemotePlayer->GetLocation() + FLocation2D(0, +2), RemotePlayer.get());
-
-			}
-		}
-		else if (key == 'd')
-		{
-			RemotePlayer->SetLocation(RemotePlayer->GetLocation() + FLocation2D(-1, 0));
-		}
-		pInputs->UpdateRemoteInputQueue();
-	}
-
+	HandleLocalInput();
+	HandleRemoteInput();
+	
 	// Stop rechecks if a hit to player has been made. (This flag is from local or remote.
 	if (!pInputs->bHasWinner)
 	{
 		auto start = std::chrono::steady_clock::now();
 
-		if (UpdateTime >= 0.00000002f)
+		if (UpdateTime >= 0.00001f)
 		{
-			// Update all bullet positions.
-			Spaceship::UpdatePool();
+			Spaceship::UpdatePool(); // Update all bullet positions.
 			FHitResult HitResult = Spaceship::CheckHit(RemotePlayer.get());
 
 			if (HitResult.bHitRemotePlayer)
@@ -168,7 +95,7 @@ void Game::Update()
 
 		}
 		auto finish = std::chrono::steady_clock::now();
-		std::chrono::duration<long double> elapsed = finish - start;
+		std::chrono::duration<double> elapsed = finish - start;
 		UpdateTime += elapsed.count();
 
 		SetCursorPostion(0, SCREEN_Y_MAX + 17);
@@ -176,7 +103,7 @@ void Game::Update()
 	}
 	
 	Draw();
-	DrawRecvData();
+	//DrawRecvData();
 
 	if (pInputs->bHasWinner && pInputs->bLoseFlag)
 	{
@@ -267,5 +194,91 @@ void Game::DrawRecvData()
 
 		if (BufferLineCounter > 10)
 			BufferLineCounter = 0;
+	}
+}
+
+void Game::Exit()
+{
+	bExit = true;
+}
+
+void Game::HandleLocalInput()
+{
+	if (_kbhit())
+	{
+		if (pInputs)
+		{
+			pInputs->ReceiveLocalGameInput(_getch());
+		}
+	}
+
+	if (pInputs && pInputs->GetLocalPendingInput())
+	{
+		char key = pInputs->GetLocalPendingInput().value(); // deref std::optional
+		if (key == 'a')
+		{
+			LocalPlayer->SetLocation(LocalPlayer->GetLocation() + FLocation2D(-1, 0));
+
+		}
+		else if (key == 'w')
+		{
+			// Local Shoot
+			if (!pInputs->bHasWinner)
+			{
+				Bullet* pBullet = LocalPlayer->Shoot();
+				if (pBullet)
+				{
+					pBullet->SetForwardDirection(EDR_Up);
+					pBullet->Activate(LocalPlayer->GetLocation() + FLocation2D(0, -2), LocalPlayer.get());
+
+				}
+
+				// Notify a remote Shoot
+				if (pNetwork)
+				{
+					const char* Location = LocalPlayer->GetLocation().ToString();
+					pNetwork->Send(Location, ENetChannel::ENET_BULLET_CHANNEL);
+				}
+			}
+		}
+		else if (key == 'd')
+		{
+			LocalPlayer->SetLocation(LocalPlayer->GetLocation() + FLocation2D(+1, 0));
+		}
+		else if (key == 'q')
+		{
+			Exit();
+		}
+		pInputs->UpdateLocalInputQueue();
+	}
+}
+
+void Game::HandleRemoteInput()
+{
+	// Remote
+	if (pInputs && pInputs->GetRemotePendingInput())
+	{
+		char key = pInputs->GetRemotePendingInput().value(); // deref std::optional
+		if (key == 'a')
+		{
+			RemotePlayer->SetLocation(RemotePlayer->GetLocation() + FLocation2D(+1, 0));
+
+		}
+		else if (key == 'w')
+		{
+			// Simulated shoot.
+			Bullet* pBullet = RemotePlayer->Shoot();
+			if (pBullet)
+			{
+				pBullet->SetForwardDirection(EDR_Down);
+				pBullet->Activate(RemotePlayer->GetLocation() + FLocation2D(0, +2), RemotePlayer.get());
+
+			}
+		}
+		else if (key == 'd')
+		{
+			RemotePlayer->SetLocation(RemotePlayer->GetLocation() + FLocation2D(-1, 0));
+		}
+		pInputs->UpdateRemoteInputQueue();
 	}
 }

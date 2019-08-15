@@ -1,25 +1,29 @@
 
 #include "Network.h"
 
-#include <chrono>
 #include <sstream>
 #include <cassert>
+#include <cstdio>
+#include <cstdlib>
 
 #include "Inputs.h"
+
 
 NetworkManager::NetworkManager(int argc, char** argv)
 {
 #if SERVER
-	pNetwork = new NetworkServer();
+	pNetwork = std::make_unique<NetworkServer>();
 #elif CLIENT
-	pNetwork = new NetworkClient();
+	pNetwork = std::make_unique<NetworkClient>();
 
-	/// Expecting Client to Run with additional parameter
-	/// Default : localhost
-	if (argc != 2) // Validate the parameters
-		printf("usage: %s server-name\n", argv[0]);
+	// Expecting Client to Run with additional parameter
+	// Default : localhost
+	//if (argc != 2) // Validate the parameters
+	//	printf("usage: %s server-name\n", argv[0]);
 
-	((NetworkClient*)pNetwork)->SetTarget(argv[1]);
+	char arg[] = "localhost";
+
+	((NetworkClient*)pNetwork.get())->SetTarget(arg); //argv[1]
 #endif
 }
 
@@ -27,12 +31,19 @@ NetworkManager::~NetworkManager()
 {
 	if(pNetwork)
 		pNetwork->Shutdown();
-
-	delete pNetwork;
+#if DEBUG_LOG_FILE
+	netSendLog.close();
+	netRecvLog.close();
+#endif
 }
 
 void NetworkManager::Init(InputManager* InputManager)
 {
+	pInputs = InputManager;
+	bInitialized = (pInputs != nullptr);
+
+	bInitialized &= (pNetwork != nullptr);
+
 	if (pNetwork)
 	{
 		int ret = pNetwork->Initialize();
@@ -43,20 +54,26 @@ void NetworkManager::Init(InputManager* InputManager)
 		}
 
 		ret = pNetwork->Setup();
-		bInitialized = (ret == RESULT_SUCCEED);
+		bInitialized &= (ret == RESULT_SUCCEED);
 	}
-
-	pInputs = InputManager;
 }
 
 void NetworkManager::TaskSend()
 {
 	char Data[DEFAULT_BUFLEN];
 
-	while (true)
+	if (bInitialized)
 	{
-		auto start = std::chrono::steady_clock::now();
-		if (pNetwork && pInputs && NetworkTime >= 0.02f)
+
+#if DEBUG_LOG_FILE
+#if SERVER
+		netSendLog.open("NetSendLogServer.txt");
+#elif CLIENT
+		netSendLog.open("NetSendLogClient.txt");
+#endif
+#endif
+
+		while (true)
 		{
 			// Read from Pending GameInput
 			if (std::optional<char> PendingChar = pInputs->GetPendingGameInputToSend())
@@ -68,20 +85,17 @@ void NetworkManager::TaskSend()
 				const char* source = key;
 
 				strcpy_s(Data, sizeof(source), source);
-				
+
 				int ret = pNetwork->Send(Data);
+#if DEBUG_LOG_FILE
+				netSendLog.write(Data, 32);
+#endif
 				if (ret > 0)
 				{
 					pInputs->UpdatePendingSendGameInputQueue();
 				}
 			}
-
-			NetworkTime = 0;
 		}
-		auto finish = std::chrono::steady_clock::now();
-
-		std::chrono::duration<double> elapsed = finish - start;
-		NetworkTime += elapsed.count();
 	}
 }
 
@@ -89,58 +103,49 @@ void NetworkManager::TaskReceive()
 {
 	char Data[DEFAULT_BUFLEN];
 
-	while (true)
+	if (bInitialized)
 	{
-		auto start = std::chrono::steady_clock::now();
-		if (pNetwork && NetworkTime >= 0.00000002f)
+#if DEBUG_LOG_FILE
+#if SERVER
+		netRecvLog.open("NetRecvLogServer.txt");
+#elif CLIENT
+		netRecvLog.open("NetRecvLogClient.txt");
+#endif
+#endif
+		while (true)
 		{
 			int ret = pNetwork->Receive(Data);
 			if (ret > 0)
 			{
+#if DEBUG_LOG_FILE
+				netRecvLog.write(Data, 32);
+#endif
 				// INPUT CHANNEL
 				if (Data[1] == '0')
 				{
-					if (pInputs)
-					{
-						pInputs->ReceiveRemoteGameInput(Data[3]);
-					}
+					pInputs->ReceiveRemoteGameInput(Data[3]);
 				}
 				else if (Data[1] == '1')
 				{
-					if (pInputs)
-					{
-						char BulletCoord[16]; // Copy to this one as the Data is mod
-						const char* coordData = BulletCoord;
-						strcpy_s(BulletCoord, 16, Data);
-						pInputs->ReceiveRemoteCoordinate(BulletCoord);
-					}
-						
+					char BulletCoord[16]; // Copy to this one as the Data is mod
+					const char* coordData = BulletCoord;
+					strcpy_s(BulletCoord, 16, Data);
+					pInputs->ReceiveRemoteCoordinate(BulletCoord);
 				}
-				else if (Data[1] == '2')
+				else if (Data[1] == '2') // Receive a win packet
 				{
-					if (pInputs)
-					{
-						pInputs->bHasWinner = true;
-						pInputs->bLoseFlag = true;
-					}
-						
+					pInputs->bHasWinner = true;
+					pInputs->bLoseFlag = true;
 				}
 			}
-
-			NetworkTime = 0;
 		}
-		auto finish = std::chrono::steady_clock::now();
-
-		std::chrono::duration<double> elapsed = finish - start;
-		NetworkTime += elapsed.count();
 	}
 }
 
 void NetworkManager::Send(const char * Context, ENetChannel ID)
 {
 	assert(ID != 0); // Input handled by Threading Tick already, sending explicitly is not allowed.
-	
-	/// FIXME : Inifite sending.
+
 	if (pNetwork)
 	{
 		char Data[DEFAULT_BUFLEN];

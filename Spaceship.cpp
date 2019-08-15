@@ -1,16 +1,6 @@
 #include "Spaceship.h"
 #include "Bullet.h"
 
-Spaceship::Spaceship()
-{
-}
-
-
-Spaceship::~Spaceship()
-{
-	
-}
-
 Bullet* Spaceship::Shoot()
 {
 	for (auto* p : SharedPool)

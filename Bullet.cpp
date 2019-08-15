@@ -15,10 +15,6 @@ Bullet::Bullet(FLocation2D StartLocation, void* Instigator)
 	Ownership = (Spaceship*)Instigator;
 }
 
-Bullet::~Bullet()
-{
-}
-
 void Bullet::Initialize()
 {
 	// Reverting Projectile Data.

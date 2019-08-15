@@ -10,14 +10,12 @@
 
 #define WIN32_LEAN_AND_MEAN
 
-#define DEFAULT_BUFLEN 512
+#define DEFAULT_BUFLEN 16
 #define DEFAULT_PORT "27015"
 
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <string>
 #include "Utils.h"
 
@@ -33,6 +31,13 @@
 #define RESULT_ERROR 1
 #define RESULT_NOT_SUPPORTED 2
 
+
+#define DEBUG_LOG_FILE 1
+
+#if DEBUG_LOG_FILE
+#include <fstream>
+#endif
+
 class NetworkCommon;
 class InputManager;
 
@@ -40,9 +45,8 @@ class InputManager;
 enum ENetChannel
 {
 	ENET_INPUT_CHANNEL,	// Sending WASD Input, Single key only. {0}x\0 = 5 char
-	ENET_BULLET_CHANNEL,	// Sending Bullet Coord, {1} ... = 128 max char
+	ENET_BULLET_CHANNEL,	// Sending Bullet Coord, {1} ... = 8 max char
 	ENET_WINNER_CHANNEL,	
-	ENET_EVENT_CHANNEL,	// Broadcast an event. {3}... = 16 max char
 };
 
 class NetworkManager
@@ -50,22 +54,26 @@ class NetworkManager
 public:
 	NetworkManager(int argc, char** argv);
 	~NetworkManager();
+
 	void Init(InputManager* InputManager);
-	void TaskSend(); //Run by threads
-	void TaskReceive(); // Run by threads.
-	void Send(const char* Context, ENetChannel ID);
+	void TaskSend();								//Run by threads
+	void TaskReceive();								// Run by threads.
+	void Send(const char* Context, ENetChannel ID);	
 
+	NetworkCommon*							GetNetwork()		{ return pNetwork.get(); }
+	bool									IsInitialized()		{ return bInitialized; }
 
-	class NetworkCommon*	GetNetwork()		{ return pNetwork; }
-	bool					IsInitialized()		{ return bInitialized; }
 private:
 
-	static void				GetNetStringToken(char* Destination, ENetChannel NetChannel);
+	static void								GetNetStringToken(char* Destination, ENetChannel NetChannel);
 
-	NetworkCommon*			pNetwork;			// Directly owned.
-	InputManager*			pInputs;			// Cache only
-	bool					bInitialized = false;
-	double					NetworkTime = 0;
+	std::unique_ptr<NetworkCommon>			pNetwork;			// Directly owned.
+	InputManager*							pInputs;			// Cache only
+	bool									bInitialized = false;
+#if DEBUG_LOG_FILE
+	std::ofstream							netSendLog;
+	std::ofstream							netRecvLog;
+#endif
 };
 
 class NetworkCommon
@@ -114,5 +122,4 @@ private:
 
 	char* Target;
 	SOCKET ConnectSocket = INVALID_SOCKET;
-
 };

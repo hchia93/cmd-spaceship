@@ -16,8 +16,14 @@ public:
 	void Update();
 	void Draw();
 	void DrawRecvData();
+	void Exit();
+
+	bool									bExit = false;
 
 private:
+
+	void HandleLocalInput();
+	void HandleRemoteInput();
 
 	std::unique_ptr<Spaceship>				LocalPlayer;
 	std::unique_ptr<Spaceship>				RemotePlayer;
@@ -27,8 +33,6 @@ private:
 	NetworkManager*							pNetwork;		// Cache only
 
 	int										BufferLineCounter = 0;
-	long double								UpdateTime = 0.0;
-
-
+	double									UpdateTime = 0.0;
 };
 
