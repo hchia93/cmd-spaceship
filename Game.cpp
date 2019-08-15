@@ -1,7 +1,6 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <chrono>
 #include <conio.h> // kbhit, MS-DOS specific now.
 
 #include "Game.h"
@@ -73,33 +72,20 @@ void Game::Update()
 	// Stop rechecks if a hit to player has been made. (This flag is from local or remote.
 	if (!pInputs->bHasWinner)
 	{
-		auto start = std::chrono::steady_clock::now();
+		Spaceship::UpdatePool(); // Update all bullet positions.
+		FHitResult HitResult = Spaceship::CheckHit(RemotePlayer.get());
 
-		if (UpdateTime >= 0.00001f)
+		if (HitResult.bHitRemotePlayer)
 		{
-			Spaceship::UpdatePool(); // Update all bullet positions.
-			FHitResult HitResult = Spaceship::CheckHit(RemotePlayer.get());
+			SetCursorPostion(0, SCREEN_Y_MAX);
+			printf("You hit the enemy. You won.");
 
-			if (HitResult.bHitRemotePlayer)
-			{
-				SetCursorPostion(0, SCREEN_Y_MAX);
-				printf("You hit the enemy. You won.");
+			pInputs->bHasWinner = true; // local. remote will get set later
 
-				pInputs->bHasWinner = true; // local. remote will get set later
-
-				if (pNetwork)
-					pNetwork->Send("", ENET_WINNER_CHANNEL);
-			}
-
-			UpdateTime = 0;
-
+			if (pNetwork)
+				pNetwork->Send("", ENET_WINNER_CHANNEL);
 		}
-		auto finish = std::chrono::steady_clock::now();
-		std::chrono::duration<double> elapsed = finish - start;
-		UpdateTime += elapsed.count();
-
 		SetCursorPostion(0, SCREEN_Y_MAX + 17);
-		printf("delta time = %.14f", UpdateTime);
 	}
 	
 	Draw();
@@ -110,6 +96,8 @@ void Game::Update()
 		SetCursorPostion(0, SCREEN_Y_MAX);
 		printf("Enemy Wins. You Lose.");
 	}
+
+	Sleep(20);
 }
 
 void Game::Draw()

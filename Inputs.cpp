@@ -16,12 +16,14 @@ InputManager::~InputManager()
 std::optional<char> InputManager::GetPendingGameInputToSend()
 { 
 	char result;
+	int size = 0; 
 	InputMutex.lock();
-	if (PendingGameInputToSend.size() > 0)
+	size = PendingGameInputToSend.size();
+	if (size > 0)
 		result = PendingGameInputToSend.front();
 	InputMutex.unlock();
 
-	if (PendingGameInputToSend.size() > 0)
+	if (size > 0)
 		return result;
 
 	return {};

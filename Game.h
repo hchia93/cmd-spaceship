@@ -33,6 +33,5 @@ private:
 	NetworkManager*							pNetwork;		// Cache only
 
 	int										BufferLineCounter = 0;
-	double									UpdateTime = 0.0;
 };
 
