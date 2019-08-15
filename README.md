@@ -6,17 +6,18 @@ This project should be in a working state locally (Please do expecting crashes)
 How To Run
 ---
 1. Open server first.
-2. Open client with 'localhost' as argument. (Ideally it should swapped out for other ip, but I haven reach that part yet.)
+2. Open client later.
 3. AD to move, W to shoot.
+4. Shoot bullet and dodge enemy's bullet.
 
 Limitation
 ---
 1. It has been only run via localhost, as due to lack of machines. 
-2. Crappy architecture, due to lack of event dispatcher, and result in dependencies. (I was unable to find more on std::function and std::bind with templated varadic arguments)
-3. Hit determination are completely local side, and depending the machine processing speed. Bullet might been seen collide with each othe in one cmd and not in another one. 
-4. Unoptimized for loops, as they deteriorate when the pool increases. (No proper hit detection designs)
+2. Less desirable class architecture. Would be better with event dispatcher. (I was unable to find more on std::function and std::bind with templated varadic arguments)
+3. Local Authoritative hit detection. Simulated bullet might not sync with the actual bullet position. 
+4. Unoptimized for loops, as they deteriorate when the pool increases. However, profiler didn't pick this up.
 5. No post-game reset game loop. 
-6. Some background freezes possibly caused by threads or network surges, as initial movement aren't smooth at all. 
+6. Threads seems to lagging sometimes. (Profiler picks up on TaskSend())
 
 Discovery/Mystery
 ---
@@ -24,12 +25,13 @@ Discovery/Mystery
 
 2. std::mutex doesn't work if it is interact with something not in std::thread. Multiple crashes and fixed couple of them
 
+3. Chrono doesn't seems very realible. Works with unoptimization off, doesn't work in optimization on. Replaced with Sleep(20) instead and position syncing is more realible locally. (100% not on remote machine)
+
 Why I made this
 ---
 1. To familiar with const char* manipulation, usually seen in Network codes or Game codes.
-2. Learn threading for the first time. 
-3. Learn std::chrono for steady timers update to simulate game ticks.
-4. Learn some Network codes.
+2. Threading, network code learning, as well as C++11,14,17 syntax.
+3. Learn to profiling and adjust codes.
 
 Reference
 ---
@@ -39,5 +41,3 @@ https://docs.microsoft.com/en-us/windows/win32/winsock/complete-server-code
 
 https://docs.microsoft.com/en-us/windows/win32/winsock/complete-client-code
 
-
-The rest is just class encapsulation.
