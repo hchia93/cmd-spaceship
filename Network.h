@@ -31,8 +31,14 @@
 #define RESULT_ERROR 1
 #define RESULT_NOT_SUPPORTED 2
 
-
+#define DEBUG_NET_LOG 0
 #define DEBUG_LOG_FILE 1
+
+#if DEBUG_NET_LOG
+#define NET_LOG(...) printf(__VA_ARGS__);
+#else 
+#define NET_LOG(...) 
+#endif
 
 #if DEBUG_LOG_FILE
 #include <fstream>
@@ -41,10 +47,9 @@
 class NetworkCommon;
 class InputManager;
 
-
 enum ENetChannel
 {
-	ENET_INPUT_CHANNEL,	// Sending WASD Input, Single key only. {0}x\0 = 5 char
+	ENET_INPUT_CHANNEL,		// Sending WASD Input, Single key only. {0}x\0 = 5 char
 	ENET_BULLET_CHANNEL,	// Sending Bullet Coord, {1} ... = 8 max char
 	ENET_WINNER_CHANNEL,	
 };
@@ -55,7 +60,7 @@ public:
 	NetworkManager(int argc, char** argv);
 	~NetworkManager();
 
-	void Init(InputManager* InputManager);
+	void Init(InputManager& InputManager);
 	void TaskSend();								//Run by threads
 	void TaskReceive();								// Run by threads.
 	void Send(const char* Context, ENetChannel ID);	
@@ -116,7 +121,6 @@ public:
 
 	void SetTarget(char* NewTarget)					{ Target = NewTarget; }		//	set ip as argument 1.
 					
-
 private:
 	int CreateSocketAndConnect();
 

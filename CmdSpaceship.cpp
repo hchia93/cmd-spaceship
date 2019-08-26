@@ -34,16 +34,15 @@ int main(int argc, char** argv)
 	InputManager InputManager;
 
 	NetworkManager NetworkManager(argc, argv);
-	NetworkManager.Init(&InputManager);
+	NetworkManager.Init(InputManager);
 	if (!NetworkManager.IsInitialized())
 		return RESULT_ERROR;
 
 	std::thread NetworkReceiverThread(&NetworkManager::TaskReceive, std::ref(NetworkManager));
 	std::thread NetworkSenderThread(&NetworkManager::TaskSend, std::ref(NetworkManager));
 
-
 	Game SpaceshipGame;
-	SpaceshipGame.Init(&InputManager, &NetworkManager);
+	SpaceshipGame.Init(InputManager, NetworkManager);
 	while (!SpaceshipGame.bExit)
 		SpaceshipGame.Update();
 

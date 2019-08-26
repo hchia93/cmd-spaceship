@@ -12,7 +12,7 @@ public:
 	Game();
 	~Game();
 
-	void Init(InputManager* InputManager, NetworkManager* NetworkManager);
+	void Init(InputManager& InputManager, NetworkManager& NetworkManager);
 	void Update();
 	void Draw();
 	void DrawRecvData();

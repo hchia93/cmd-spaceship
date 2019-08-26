@@ -8,7 +8,6 @@
 
 #include "Inputs.h"
 
-
 NetworkManager::NetworkManager(int argc, char** argv)
 {
 #if SERVER
@@ -19,7 +18,7 @@ NetworkManager::NetworkManager(int argc, char** argv)
 	// Expecting Client to Run with additional parameter
 	// Default : localhost
 	//if (argc != 2) // Validate the parameters
-	//	printf("usage: %s server-name\n", argv[0]);
+	//	NET_LOG("usage: %s server-name\n", argv[0]);
 
 	char arg[] = "localhost";
 
@@ -29,19 +28,17 @@ NetworkManager::NetworkManager(int argc, char** argv)
 
 NetworkManager::~NetworkManager()
 {
-	if(pNetwork)
-		pNetwork->Shutdown();
+	pNetwork->Shutdown();
 #if DEBUG_LOG_FILE
 	netSendLog.close();
 	netRecvLog.close();
 #endif
 }
 
-void NetworkManager::Init(InputManager* InputManager)
+void NetworkManager::Init(InputManager& InputManager)
 {
-	pInputs = InputManager;
+	pInputs = &InputManager;
 	bInitialized = (pInputs != nullptr);
-
 	bInitialized &= (pNetwork != nullptr);
 
 	if (pNetwork)
@@ -146,19 +143,15 @@ void NetworkManager::Send(const char * Context, ENetChannel ID)
 {
 	assert(ID != 0); // Input handled by Threading Tick already, sending explicitly is not allowed.
 
-	if (pNetwork)
-	{
-		char Data[DEFAULT_BUFLEN];
-		char Token[4];
-		GetNetStringToken(Token ,ID);
-		strcpy_s(Data, 4, Token); // Copy {token} first, then append context.
+	char Data[DEFAULT_BUFLEN];
+	char Token[4];
+	GetNetStringToken(Token ,ID);
 
-		const char* ptr = Data;
-		strcpy_s(Data + 3, sizeof(Context), Context);
+	strcpy_s(Data, 4, Token); // Copy {token} first, then append context.
+	const char* ptr = Data;
+	strcpy_s(Data + 3, sizeof(Context), Context);
 
-		pNetwork->Send(Data);
-	}
-		
+	pNetwork->Send(Data);
 }
 
 void NetworkManager::GetNetStringToken(char* Destination, ENetChannel NetChannel)
@@ -183,7 +176,7 @@ int NetworkCommon::Initialize()
 	int ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (ret != 0) 
 	{
-		printf("WSAStartup failed with error: %d\n", ret);
+		NET_LOG("WSAStartup failed with error: %d\n", ret);
 		return RESULT_ERROR;
 	}
 
@@ -209,7 +202,7 @@ int NetworkServer::Initialize()
 
 	if (ret != 0) 
 	{
-		printf("[Server] getaddrinfo failed with error: %d\n", ret);
+		NET_LOG("[Server] getaddrinfo failed with error: %d\n", ret);
 		WSACleanup();
 		return RESULT_ERROR;
 	}
@@ -234,7 +227,7 @@ int NetworkServer::Send(const char* Context)
 
 	int ret = send(ClientSocket, Context, (int)(strlen(Context) + 1), 0);
 	if (ret == SOCKET_ERROR)
-		printf("[Server] Send failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Server] Send failed with error: %d\n", WSAGetLastError());
 	
 	return ret;
 }
@@ -255,8 +248,7 @@ int NetworkServer::Receive(char* Context)
 	}
 	else
 	{
-		// Failure
-		printf("[Server] Receive failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Server] Receive failed with error: %d\n", WSAGetLastError());
 	}
 
 	return ret;
@@ -266,7 +258,7 @@ int NetworkServer::Shutdown()
 {
 	int ret = shutdown(ClientSocket, SD_SEND);
 	if (ret == SOCKET_ERROR)
-		printf("[Server] Shutdown failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Server] Shutdown failed with error: %d\n", WSAGetLastError());
 	
 	closesocket(ClientSocket);
 	WSACleanup();
@@ -280,7 +272,7 @@ int NetworkServer::CreateListenSocketAndAcceptClient()
 	ListenSocket = socket(AddressResult->ai_family, AddressResult->ai_socktype, AddressResult->ai_protocol);
 	if (ListenSocket == INVALID_SOCKET) 
 	{
-		printf("[Server] Socket failed with error: %ld\n", WSAGetLastError());
+		NET_LOG("[Server] Socket failed with error: %ld\n", WSAGetLastError());
 		freeaddrinfo(AddressResult);
 		WSACleanup();
 		return RESULT_ERROR;
@@ -290,7 +282,7 @@ int NetworkServer::CreateListenSocketAndAcceptClient()
 	int ret = bind(ListenSocket, AddressResult->ai_addr, (int)AddressResult->ai_addrlen);
 	if (ret == SOCKET_ERROR) 
 	{
-		printf("[Server] Bind failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Server] Bind failed with error: %d\n", WSAGetLastError());
 		freeaddrinfo(AddressResult);
 		closesocket(ListenSocket);
 		WSACleanup();
@@ -302,7 +294,7 @@ int NetworkServer::CreateListenSocketAndAcceptClient()
 	ret = listen(ListenSocket, SOMAXCONN);
 	if (ret == SOCKET_ERROR)
 	{
-		printf("[Server] Listen failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Server] Listen failed with error: %d\n", WSAGetLastError());
 		closesocket(ListenSocket);
 		WSACleanup();
 		return RESULT_ERROR;
@@ -312,7 +304,7 @@ int NetworkServer::CreateListenSocketAndAcceptClient()
 	ClientSocket = accept(ListenSocket, NULL, NULL);
 	if (ClientSocket == INVALID_SOCKET) 
 	{
-		printf("[Server] Accept failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Server] Accept failed with error: %d\n", WSAGetLastError());
 		closesocket(ListenSocket);
 		WSACleanup();
 		return RESULT_ERROR;
@@ -340,7 +332,7 @@ int NetworkClient::Initialize()
 	int ret = getaddrinfo(Target, DEFAULT_PORT, &hints, &AddressResult);
 	if (ret != 0)
 	{
-		printf("[Client] getaddrinfo failed with error: %d\n", ret);
+		NET_LOG("[Client] getaddrinfo failed with error: %d\n", ret);
 		WSACleanup();
 		return RESULT_ERROR;
 	}
@@ -365,7 +357,7 @@ int NetworkClient::Send(const char* Context)
 	//Send one more character to allow termnating character to be sent.
 	int ret = send(ConnectSocket, Context, (int)(strlen(Context)+1), 0);
 	if (ret == SOCKET_ERROR)
-		printf("[Client] Send failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Client] Send failed with error: %d\n", WSAGetLastError());
 
 	return ret;
 }
@@ -386,7 +378,7 @@ int NetworkClient::Receive(char* Context)
 	}
 	else
 	{
-		printf("[Client] Receive failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Client] Receive failed with error: %d\n", WSAGetLastError());
 	}
 
 	return ret;
@@ -396,7 +388,7 @@ int NetworkClient::Shutdown()
 {
 	int ret = shutdown(ConnectSocket, SD_SEND);
 	if (ret == SOCKET_ERROR)
-		printf("[Client] Shutdown failed with error: %d\n", WSAGetLastError());
+		NET_LOG("[Client] Shutdown failed with error: %d\n", WSAGetLastError());
 	
 	closesocket(ConnectSocket);
 	WSACleanup();
@@ -413,7 +405,7 @@ int NetworkClient::CreateSocketAndConnect()
 		ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 		if (ConnectSocket == INVALID_SOCKET)
 		{
-			printf("[Client] Socket failed with error: %ld\n", WSAGetLastError());
+			NET_LOG("[Client] Socket failed with error: %ld\n", WSAGetLastError());
 			WSACleanup();
 			return RESULT_ERROR;
 		}
@@ -433,7 +425,7 @@ int NetworkClient::CreateSocketAndConnect()
 
 	if (ConnectSocket == INVALID_SOCKET)
 	{
-		printf("[Client] Unable to connect to server!\n");
+		NET_LOG("[Client] Unable to connect to server!\n");
 		WSACleanup();
 		return RESULT_ERROR;
 	}
