@@ -1,5 +1,5 @@
 # CmdSpaceship
-(WIP) CmdSpaceship was a course I taken in Parallel Processing course with threads in Linux, now fully rewrite using C++ thread library and winsock2. Originally only support nthreads (Input thread and Logic thread), now input are communicating via winsock2 layer.
+CmdSpaceship was a course I taken in Parallel Processing course with threads in Linux, now fully rewrite using C++ thread library and winsock2. Originally only support nthreads (Input thread and Logic thread), now input are communicating via winsock2 layer.
 
 This project should be in a working state locally (Please do expecting crashes)
 
