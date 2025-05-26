@@ -4,7 +4,7 @@ It was firstly written with `<pthread.h>` in Linux, and now fully rewritten with
 
 The code is evolved from a course material from Parallel Processing course in [Multimedia University](https://www.mmu.edu.my/)
 
-[![Watch the video](https://raw.githubusercontent.com/hchia93/cmd-spaceship/main/cmd-spaceship/thumbnails.png)](https://raw.githubusercontent.com/hchia93/cmd-spaceship/main/cmd-spaceship.mp4)
+[![Watch the preview](thumbnails.png)](preview.mp4)
 
 ## Instruction
 ### Running the Application
