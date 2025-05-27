@@ -2,39 +2,61 @@
 #include "Bullet.h"
 #include "Spaceship.h"
 
-Bullet::Bullet()
+void Bullet::Activate(BulletSpawnParam Param)
 {
-    CurrentLocation = FLocation2D(-1, -1);
-    ForwardDirection = EDirection::Unknown;
+    if (Param.Instigator != nullptr)
+    {
+        const FLocation2D SpaceShipLocation = Param.Instigator->GetLocation();
+        bool IsLocal = Param.Instigator->GetNetRole() == ENetRole::LOCAL;
+
+        // Resolved Location
+        if (IsLocal)
+        {
+            m_Location.Y = Param.Instigator->GetLocation().Y - 1;
+        }
+        else
+        {
+            m_Location.Y = Param.Instigator->GetLocation().Y + 1;
+        }
+
+        m_Direction = IsLocal ? EDirection::Up : EDirection::Down;
+        m_Owner = Param.Instigator;
+        bIsActive = true;
+    }
+}
+
+void Bullet::Tick()
+{
+    switch (m_Direction)
+    {
+    case EDirection::Up:
+    {
+        if (m_Location.Y >= 1 && m_Location.Y <= SCREEN_Y_MAX - 1)
+        {
+            m_Location.Y -= 1;
+        }
+        else
+        {
+            Deactivate();
+        }
+        break;
+    }
+    case EDirection::Down:
+    {
+        if (m_Location.Y >= 1 && m_Location.Y <= SCREEN_Y_MAX - 1)
+        {
+            m_Location.Y += 1;
+        }
+        else
+        {
+            Deactivate();
+        }
+        break;
+    }
+    }
+}
+
+void Bullet::Deactivate()
+{
     bIsActive = false;
-}
-
-Bullet::Bullet(FLocation2D StartLocation, void* Instigator)
-{
-    CurrentLocation = StartLocation;
-    Ownership = (Spaceship*)Instigator;
-}
-
-void Bullet::Initialize()
-{
-    // Reverting Projectile Data.
-    CurrentLocation = FLocation2D(-1, -1);
-    ForwardDirection = EDirection::Unknown;
-}
-
-void Bullet::Activate(FLocation2D WakeLocation, void* Instigator)
-{
-    CurrentLocation = WakeLocation;
-    Ownership = (Spaceship*)Instigator;
-    bIsActive = true;
-}
-
-void Bullet::Sleep()
-{
-    bIsActive = false;
-}
-
-bool Bullet::IsActive()
-{
-    return bIsActive;
 }

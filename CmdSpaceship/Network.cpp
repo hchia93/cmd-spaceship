@@ -1,29 +1,18 @@
-
 #include "Network.h"
 
+// Standard library includes
+#include <string>
 #include <sstream>
 #include <cassert>
 #include <cstdio>
-#include <cstdlib>
 
+// Project includes
 #include "Inputs.h"
 
-NetworkManager::NetworkManager(int argc, char** argv)
+NetworkManager::NetworkManager()
 {
-#if SERVER_BUILD
-    pNetwork = std::make_unique<NetworkServer>();
-#elif CLIENT_BUILD
-    pNetwork = std::make_unique<NetworkClient>();
-
-    // Expecting Client to Run with additional parameter
-    // Default : localhost
-    //if (argc != 2) // Validate the parameters
-    //	NET_LOG("usage: %s server-name\n", argv[0]);
-
-    char arg[] = "localhost";
-
-    ((NetworkClient*)pNetwork.get())->SetTarget(arg); //argv[1]
-#endif
+    SERVER_ONLY(pNetwork = std::make_unique<NetworkServer>())
+    CLIENT_ONLY(pNetwork = std::make_unique<NetworkClient>())
 }
 
 NetworkManager::~NetworkManager()
@@ -36,26 +25,36 @@ NetworkManager::~NetworkManager()
 #if DEBUG_LOG_FILE
     netSendLog.close();
     netRecvLog.close();
-#endif
+#endif // DEBUG_LOG_FILE
 }
 
-void NetworkManager::Init(InputManager& InputManager)
+void NetworkManager::SetInputManager(InputManager* Manager)
 {
-    pInputs = &InputManager;
-    bInitialized = (pInputs != nullptr);
-    bInitialized &= (pNetwork != nullptr);
+    pInputManager = Manager;
+}
 
+void NetworkManager::Initialize()
+{
     if (pNetwork)
     {
-        int ret = pNetwork->Initialize();
-        if (ret != 0)
+        int result = pNetwork->Initialize();
+        if (result != RESULT_SUCCEED)
         {
-            bInitialized = false;
             return;
         }
 
-        ret = pNetwork->Setup();
-        bInitialized &= (ret == RESULT_SUCCEED);
+        result = pNetwork->Setup();
+        if (result != RESULT_SUCCEED)
+        {
+            return;
+        }
+        
+        if (pInputManager == nullptr)
+        {
+            return;
+        }
+
+        bInitialized = true;
     }
 }
 
@@ -67,17 +66,14 @@ void NetworkManager::TaskSend()
     {
 
 #if DEBUG_LOG_FILE
-#if SERVER_BUILD
-        netSendLog.open("NetSendLogServer.txt");
-#elif CLIENT_BUILD
-        netSendLog.open("NetSendLogClient.txt");
-#endif
-#endif
+        SERVER_ONLY(netSendLog.open("NetSendLogServer.txt"))
+        CLIENT_ONLY(netSendLog.open("NetSendLogClient.txt"))
+#endif // DEBUG_LOG_FILE
 
         while (true)
         {
             // Read from Pending GameInput
-            if (std::optional<char> PendingChar = pInputs->GetPendingGameInputToSend())
+            if (std::optional<char> PendingChar = pInputManager->GetPendingGameInputToSend())
             {
                 char key[5];
                 GetNetStringToken(key, ENET_INPUT_CHANNEL);
@@ -90,10 +86,10 @@ void NetworkManager::TaskSend()
                 int ret = pNetwork->Send(Data);
 #if DEBUG_LOG_FILE
                 netSendLog.write(Data, 32);
-#endif
+#endif // DEBUG_LOG_FILE
                 if (ret > 0)
                 {
-                    pInputs->UpdatePendingSendGameInputQueue();
+                    pInputManager->UpdatePendingSendGameInputQueue();
                 }
             }
         }
@@ -107,36 +103,34 @@ void NetworkManager::TaskReceive()
     if (bInitialized)
     {
 #if DEBUG_LOG_FILE
-#if SERVER
-        netRecvLog.open("NetRecvLogServer.txt");
-#elif CLIENT
-        netRecvLog.open("NetRecvLogClient.txt");
-#endif
-#endif
+        SERVER_ONLY(netRecvLog.open("NetRecvLogServer.txt"))
+        CLIENT_ONLY(netRecvLog.open("NetRecvLogClient.txt"))
+#endif//DEBUG_LOG_FILE
+
         while (true)
         {
-            int ret = pNetwork->Receive(Data);
-            if (ret > 0)
+            int result = pNetwork->Receive(Data);
+            if (result > 0)
             {
 #if DEBUG_LOG_FILE
                 netRecvLog.write(Data, 32);
-#endif
+#endif //DEBUG_LOG_FILE
                 // INPUT CHANNEL
                 if (Data[1] == '0')
                 {
-                    pInputs->ReceiveRemoteGameInput(Data[3]);
+                    pInputManager->ReceiveRemoteGameInput(Data[3]);
                 }
                 else if (Data[1] == '1')
                 {
                     char BulletCoord[16]; // Copy to this one as the Data is mod
                     const char* coordData = BulletCoord;
                     strcpy_s(BulletCoord, 16, Data);
-                    pInputs->ReceiveRemoteCoordinate(BulletCoord);
+                    pInputManager->ReceiveRemoteCoordinate(BulletCoord);
                 }
                 else if (Data[1] == '2') // Receive a win packet
                 {
-                    pInputs->bHasWinner = true;
-                    pInputs->bLoseFlag = true;
+                    pInputManager->bHasWinner = true;
+                    pInputManager->bLoseFlag = true;
                 }
             }
         }
@@ -192,7 +186,10 @@ int NetworkCommon::Initialize()
 int NetworkServer::Initialize()
 {
     if (NetworkCommon::Initialize() != 0)
+    {
         return RESULT_ERROR;
+    }
+       
 
     struct addrinfo hints;
 
@@ -202,9 +199,8 @@ int NetworkServer::Initialize()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
-    int ret = getaddrinfo(NULL, DEFAULT_PORT, &hints, &AddressResult);
-
-    if (ret != 0)
+    int result = getaddrinfo(NULL, DEFAULT_PORT, &hints, &AddressResult);
+    if (result != 0)
     {
         NET_LOG("[Server] getaddrinfo failed with error: %d\n", ret);
         WSACleanup();
@@ -216,8 +212,8 @@ int NetworkServer::Initialize()
 
 int NetworkServer::Setup()
 {
-    int ret = CreateListenSocketAndAcceptClient();
-    if (ret != RESULT_SUCCEED)
+    int result = CreateListenSocketAndAcceptClient();
+    if (result != RESULT_SUCCEED)
     {
         return RESULT_ERROR;
     }
@@ -233,13 +229,13 @@ int NetworkServer::Send(const char* Context)
         return RESULT_ERROR;
     }
 
-    int ret = send(ClientSocket, Context, (int)(strlen(Context) + 1), 0);
-    if (ret == SOCKET_ERROR)
+    int result = send(ClientSocket, Context, (int)(strlen(Context) + 1), 0);
+    if (result == SOCKET_ERROR)
     {
         NET_LOG("[Server] Send failed with error: %d\n", WSAGetLastError());
     }
 
-    return ret;
+    return result;
 }
 
 int NetworkServer::Receive(char* Context)
@@ -247,12 +243,12 @@ int NetworkServer::Receive(char* Context)
     char recvbuf[DEFAULT_BUFLEN];
     int recvbuflen = DEFAULT_BUFLEN;
 
-    int ret = recv(ClientSocket, recvbuf, recvbuflen, 0);
-    if (ret > 0)
+    int result = recv(ClientSocket, recvbuf, recvbuflen, 0);
+    if (result > 0)
     {
         strcpy_s(Context, sizeof(recvbuf), recvbuf);
     }
-    else if (ret == 0)
+    else if (result == 0)
     {
         // Nothing coming in
     }
@@ -261,13 +257,13 @@ int NetworkServer::Receive(char* Context)
         NET_LOG("[Server] Receive failed with error: %d\n", WSAGetLastError());
     }
 
-    return ret;
+    return result;
 }
 
 int NetworkServer::Shutdown()
 {
-    int ret = shutdown(ClientSocket, SD_SEND);
-    if (ret == SOCKET_ERROR)
+    int result = shutdown(ClientSocket, SD_SEND);
+    if (result == SOCKET_ERROR)
     {
         NET_LOG("[Server] Shutdown failed with error: %d\n", WSAGetLastError());
     }
@@ -275,7 +271,7 @@ int NetworkServer::Shutdown()
     closesocket(ClientSocket);
     WSACleanup();
 
-    return (ret == SOCKET_ERROR) ? RESULT_ERROR : RESULT_SUCCEED;
+    return (result == SOCKET_ERROR) ? RESULT_ERROR : RESULT_SUCCEED;
 }
 
 int NetworkServer::CreateListenSocketAndAcceptClient()
@@ -291,8 +287,8 @@ int NetworkServer::CreateListenSocketAndAcceptClient()
     }
 
     // Setup the TCP listening socket
-    int ret = bind(ListenSocket, AddressResult->ai_addr, (int)AddressResult->ai_addrlen);
-    if (ret == SOCKET_ERROR)
+    int result = bind(ListenSocket, AddressResult->ai_addr, (int)AddressResult->ai_addrlen);
+    if (result == SOCKET_ERROR)
     {
         NET_LOG("[Server] Bind failed with error: %d\n", WSAGetLastError());
         freeaddrinfo(AddressResult);
@@ -303,8 +299,8 @@ int NetworkServer::CreateListenSocketAndAcceptClient()
 
     freeaddrinfo(AddressResult);
 
-    ret = listen(ListenSocket, SOMAXCONN);
-    if (ret == SOCKET_ERROR)
+    result = listen(ListenSocket, SOMAXCONN);
+    if (result == SOCKET_ERROR)
     {
         NET_LOG("[Server] Listen failed with error: %d\n", WSAGetLastError());
         closesocket(ListenSocket);
@@ -341,8 +337,8 @@ int NetworkClient::Initialize()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
-    int ret = getaddrinfo(Target, DEFAULT_PORT, &hints, &AddressResult);
-    if (ret != 0)
+    int result = getaddrinfo(Target, DEFAULT_PORT, &hints, &AddressResult);
+    if (result != 0)
     {
         NET_LOG("[Client] getaddrinfo failed with error: %d\n", ret);
         WSACleanup();
@@ -354,9 +350,11 @@ int NetworkClient::Initialize()
 
 int NetworkClient::Setup()
 {
-    int ret = CreateSocketAndConnect();
-    if (ret != RESULT_SUCCEED)
+    int result = CreateSocketAndConnect();
+    if (result != RESULT_SUCCEED)
+    {
         return RESULT_ERROR;
+    }
 
     return RESULT_SUCCEED;
 }
@@ -364,14 +362,18 @@ int NetworkClient::Setup()
 int NetworkClient::Send(const char* Context)
 {
     if (Context == nullptr)
+    {
         return RESULT_ERROR;
+    }
 
     //Send one more character to allow termnating character to be sent.
-    int ret = send(ConnectSocket, Context, (int)(strlen(Context) + 1), 0);
-    if (ret == SOCKET_ERROR)
+    int result = send(ConnectSocket, Context, (int)(strlen(Context) + 1), 0);
+    if (result == SOCKET_ERROR)
+    {
         NET_LOG("[Client] Send failed with error: %d\n", WSAGetLastError());
+    }
 
-    return ret;
+    return result;
 }
 
 int NetworkClient::Receive(char* Context)
@@ -379,12 +381,12 @@ int NetworkClient::Receive(char* Context)
     char recvbuf[DEFAULT_BUFLEN];
     int recvbuflen = DEFAULT_BUFLEN;
 
-    int ret = recv(ConnectSocket, recvbuf, recvbuflen, 0);
-    if (ret > 0)
+    int result = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+    if (result > 0)
     {
         strcpy_s(Context, sizeof(recvbuf), recvbuf);
     }
-    else if (ret == 0)
+    else if (result == 0)
     {
         // Nothing coming in
     }
@@ -393,19 +395,21 @@ int NetworkClient::Receive(char* Context)
         NET_LOG("[Client] Receive failed with error: %d\n", WSAGetLastError());
     }
 
-    return ret;
+    return result;
 }
 
 int NetworkClient::Shutdown()
 {
-    int ret = shutdown(ConnectSocket, SD_SEND);
-    if (ret == SOCKET_ERROR)
+    int result = shutdown(ConnectSocket, SD_SEND);
+    if (result == SOCKET_ERROR)
+    {
         NET_LOG("[Client] Shutdown failed with error: %d\n", WSAGetLastError());
+    }
 
     closesocket(ConnectSocket);
     WSACleanup();
 
-    return (ret == SOCKET_ERROR) ? RESULT_ERROR : RESULT_SUCCEED;
+    return (result == SOCKET_ERROR) ? RESULT_ERROR : RESULT_SUCCEED;
 }
 
 int NetworkClient::CreateSocketAndConnect()
@@ -423,8 +427,8 @@ int NetworkClient::CreateSocketAndConnect()
         }
 
         // Connect to server.
-        int ret = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
-        if (ret == SOCKET_ERROR)
+        int result = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+        if (result == SOCKET_ERROR)
         {
             closesocket(ConnectSocket);
             ConnectSocket = INVALID_SOCKET;

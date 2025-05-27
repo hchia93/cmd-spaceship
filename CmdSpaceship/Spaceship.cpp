@@ -1,124 +1,49 @@
 #include "Spaceship.h"
 #include "Bullet.h"
 
+Spaceship::Spaceship(SpaceShipSpawnParam Param)
+{
+    m_NetRole = Param.NetRole;
+    m_Location = Param.SpawnLocation;
+    m_RequestBulletDelegate = Param.SpawnFunction;
+}
+
 Bullet* Spaceship::Shoot()
 {
-    for (auto* p : SharedPool)
+    if (m_RequestBulletDelegate)
     {
-        if (!p) continue;
-
-        if (!p->IsActive())
+        if (Bullet* pBullet = m_RequestBulletDelegate())
         {
-            p->Initialize();
-            return p;
+            BulletSpawnParam param;
+            param.Instigator = this;
+
+            pBullet->Activate(param);
         }
     }
-
-    Bullet* pBullet = new Bullet(GetLocation(), this);
-    SharedPool.push_back(pBullet);
-    return (Bullet*)SharedPool.back();
+    return nullptr;
 }
 
-void Spaceship::UpdatePool()
+void Spaceship::MoveLeft()
 {
-    for (auto* p : SharedPool)
+    if (m_NetRole == ENetRole::LOCAL)
     {
-        if (p)
-        {
-            if (p->GetForwardDirection() == Up)
-            {
-                if (p->GetLocation().Y >= 0 && p->GetLocation().Y <= SCREEN_Y_MAX)
-                {
-                    p->SetLocation(p->GetLocation() + FLocation2D(0, -1));
-                }
-                else
-                {
-                    p->Sleep();
-                }
-            }
-
-            if (p->GetForwardDirection() == Down)
-            {
-                if (p->GetLocation().Y >= 0 && p->GetLocation().Y <= SCREEN_Y_MAX)
-                {
-                    p->SetLocation(p->GetLocation() + FLocation2D(0, +1));
-                }
-                else
-                {
-                    p->Sleep();
-                }
-            }
-        }
+        m_Location.X -= 1;
+    }
+    else
+    {
+        m_Location.X += 1;
     }
 }
 
-FHitResult Spaceship::CheckHit(Spaceship* Othership)
+void Spaceship::MoveRight()
 {
-    FHitResult hit;
-    for (auto* p : SharedPool)
+    if (m_NetRole == ENetRole::LOCAL)
     {
-        if (p && Othership && p->GetForwardDirection() == Up && p->IsActive())
-        {
-            FLocation2D bLoc = p->GetLocation();
-            FLocation2D sLoc = Othership->GetLocation();
-            if (bLoc == sLoc || bLoc == sLoc + FLocation2D(1, 0) || bLoc == sLoc + FLocation2D(-1, 0) || bLoc == sLoc + FLocation2D(0, 1))
-            {
-                p->Sleep();
-                hit.bHitRemotePlayer = true;
-            }
-        }
-
-        for (auto* q : SharedPool)
-        {
-            if (p && q)
-            {
-                if (p->GetLocation() == q->GetLocation() && p->IsActive() && q->IsActive() && p != q) //self collision remove!
-                {
-                    hit.bHitBullet = true;
-                    p->Sleep();
-                    q->Sleep();
-                }
-            }
-        }
+        m_Location.X += 1;
     }
-    return hit;
-}
-
-bool Spaceship::FindLocalBullet(int row, int col)
-{
-    for (auto* p : SharedPool)
+    else
     {
-        if (p && p->GetForwardDirection() == Up && p->IsActive())
-        {
-            if (FLocation2D::IsMatch(row, col, p->GetLocation()))
-                return true;
-        }
+        m_Location.X -= 1;
     }
-    return false;
 }
 
-bool Spaceship::FindRemoteBullet(int row, int col)
-{
-    for (auto* p : SharedPool)
-    {
-        if (p && p->GetForwardDirection() == Down && p->IsActive())
-        {
-            if (FLocation2D::IsMatch(row, col, p->GetLocation()))
-                return true;
-        }
-    }
-    return false;
-}
-
-void Spaceship::KillPool()
-{
-    for (auto* p : SharedPool)
-        delete p;
-}
-
-std::vector<Bullet*> Spaceship::SharedPool = [] {
-    std::vector<Bullet*> v;
-    for (int i = 0; i < 10; ++i)
-        v.push_back(new Bullet());
-    return v;
-    }();

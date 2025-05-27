@@ -5,8 +5,6 @@
 class InputManager
 {
 public:
-    InputManager();
-    ~InputManager();
 
     // Helper function to send to network thread.
     std::optional<char> GetPendingGameInputToSend();

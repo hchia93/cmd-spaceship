@@ -1,31 +1,30 @@
 #pragma once
 #include "Utils.h"
-#include "Interface.h"
 
 class Spaceship;
 
-class Bullet : public IPoolable
+struct BulletSpawnParam
+{
+    Spaceship* Instigator;
+};
+
+class Bullet
 {
 public:
-    explicit Bullet();
-    explicit Bullet(FLocation2D StartLocation, void* Instigator);
+    void Activate(BulletSpawnParam Param);
+    void Deactivate();
+    const bool IsActive() { return bIsActive; }
 
-    //IPoolable
-    virtual void Initialize() override;
-    virtual void Activate(FLocation2D WakeLocation, void* Instigator) override;
-    virtual void Sleep() override;
-    virtual bool  IsActive() override;
-    //~IPoolable
+    void Tick();
 
-    FLocation2D GetLocation() const { return CurrentLocation; }
-    EDirection  GetForwardDirection() const { return ForwardDirection; }
-    void SetLocation(FLocation2D Location) { CurrentLocation = Location; }
-    void SetForwardDirection(EDirection Direction) { ForwardDirection = Direction; }
+    FLocation2D GetLocation() const { return m_Location; }
+    EDirection GetDirection() const { return m_Direction; }
+    Spaceship* GetOwner() { return m_Owner; }
 
 private:
-    FLocation2D CurrentLocation;
-    EDirection  ForwardDirection;
-    Spaceship* Ownership;
+    FLocation2D m_Location;
+    EDirection  m_Direction;
+    Spaceship* m_Owner;
     bool bIsActive = false;
 };
 

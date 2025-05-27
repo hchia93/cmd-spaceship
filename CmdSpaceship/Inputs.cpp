@@ -1,33 +1,26 @@
-
-#include "Inputs.h"
 #include <mutex>
+#include "Inputs.h"
 
 static std::mutex InputMutex;
-
-InputManager::InputManager()
-{
-}
-
-
-InputManager::~InputManager()
-{
-}
 
 std::optional<char> InputManager::GetPendingGameInputToSend()
 {
     char result;
-    int size = 0;
     InputMutex.lock();
-    size = PendingGameInputToSend.size();
+    size_t size = PendingGameInputToSend.size();
     if (size > 0)
+    {
         result = PendingGameInputToSend.front();
+    }
+
     InputMutex.unlock();
 
     if (size > 0)
+    {
         return result;
+    }
 
     return {};
-
 }
 
 void InputManager::ReceiveRemoteGameInput(char Key)
