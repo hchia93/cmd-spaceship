@@ -6,7 +6,7 @@ void Bullet::Activate(BulletSpawnParam Param)
 {
     if (Param.Instigator != nullptr)
     {
-        const FLocation2D SpaceShipLocation = Param.Instigator->GetLocation();
+        m_Location = Param.Instigator->GetLocation();
         bool IsLocal = Param.Instigator->GetNetRole() == ENetRole::LOCAL;
 
         // Resolved Location
@@ -31,9 +31,9 @@ void Bullet::Tick()
     {
     case EDirection::Up:
     {
-        if (m_Location.Y >= 1 && m_Location.Y <= SCREEN_Y_MAX - 1)
+        if (m_Location.X >= 0 && m_Location.X <= SCREEN_X_MAX - 1)
         {
-            m_Location.Y -= 1;
+            m_Location.X += 1;
         }
         else
         {
@@ -43,9 +43,9 @@ void Bullet::Tick()
     }
     case EDirection::Down:
     {
-        if (m_Location.Y >= 1 && m_Location.Y <= SCREEN_Y_MAX - 1)
+        if (m_Location.X >= 0 && m_Location.X <= SCREEN_X_MAX - 1)
         {
-            m_Location.Y += 1;
+            m_Location.X -= 1;
         }
         else
         {

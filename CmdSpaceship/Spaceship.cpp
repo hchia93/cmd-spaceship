@@ -18,6 +18,7 @@ Bullet* Spaceship::Shoot()
             param.Instigator = this;
 
             pBullet->Activate(param);
+            return pBullet;
         }
     }
     return nullptr;

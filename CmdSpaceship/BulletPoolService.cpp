@@ -45,7 +45,7 @@ void BulletPoolService::TickAll()
 {
     for (std::unique_ptr<Bullet>& element : m_Pool)
     {
-        if (!element.get()->IsActive())
+        if (element.get()->IsActive())
         {
             element.get()->Tick();
         }
