@@ -4,7 +4,7 @@ It was firstly written with `<pthread.h>` in Linux, and now fully rewritten with
 
 The code is evolved from a course material from Parallel Processing course in [Multimedia University](https://www.mmu.edu.my/) in 2015.
 
-![Watch the preview](preview.gif)
+![Watch the preview](cmd-spaceship-2.gif)
 
 ## Instruction
 ### Running the Application
@@ -16,10 +16,12 @@ The code is evolved from a course material from Parallel Processing course in [M
 `A` and `D` to move horizontally, W to shoot.
 
 ## Roadmap
-### 2025
-- Refactor and split manager classes. 
-- Implement basic game loop and reset capabilities
-- Upgrade to newer version of C++
+### 2025 - Done
+- Make proper solution for a old-school school project. 
+- Encapsulate logic and responsibility to each of their class.
+- Update coding standard to cpp17. 
+- Updated ReadMe.md and added fancy preview.
+- Fix code, and refactoring with vibe coding. (Still a bit manual coding before the codebase reaching vibe-able.)
 
 ## Reference
 The winsock2 part I take references from :	

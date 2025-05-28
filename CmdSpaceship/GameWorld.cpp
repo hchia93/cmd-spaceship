@@ -55,9 +55,11 @@ void SetConsoleColor(unsigned short color)
     SetConsoleTextAttribute(ConsoleHandle::GetInstance().Get(), color);
 }
 
-void SetCursorInfo()
+void SetCursorInfo(bool visible = false)
 {
-    CONSOLE_CURSOR_INFO info{0, false};
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 1;    // The percentage of the character cell that is filled by the cursor
+    info.bVisible = visible;  // Visibility of the cursor
     SetConsoleCursorInfo(ConsoleHandle::GetInstance().Get(), &info);
 }
 
@@ -176,6 +178,9 @@ void GameWorld::Update()
         return;
     }
 
+    // Ensure cursor is hidden at the start of each frame
+    SetCursorInfo(false);
+
     // Calculate frame timing
     auto currentTime = std::chrono::steady_clock::now();
     auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - m_LastFrameTime);
@@ -223,6 +228,9 @@ void GameWorld::Draw()
     {
         return;
     }
+
+    // Ensure cursor is hidden before drawing
+    SetCursorInfo(false);
 
     const FLocation2D localPosition = m_LocalSpaceShip->GetLocation();
     const FLocation2D remotePosition = m_RemoteSpaceShip->GetLocation();
@@ -279,6 +287,9 @@ void GameWorld::Draw()
 
 void GameWorld::DrawRecvData()
 {
+    // Ensure cursor is hidden before drawing
+    SetCursorInfo(false);
+
     SetCursorPostion(0, SCREEN_Y_MAX + m_BufferLineCounter);
     printf("%20s", " ");
     if (auto coordBuffer = m_InputManager.GetCoordBuffer())
