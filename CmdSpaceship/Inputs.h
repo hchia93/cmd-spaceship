@@ -1,6 +1,7 @@
 #pragma once
 #include <queue>
 #include <optional>
+#include <string>
 
 class InputManager
 {
@@ -18,9 +19,9 @@ public:
     void UpdateLocalInputQueue(); // pop
     void UpdateRemoteInputQueue(); // pop
 
-    // Diplay Bullet Fire Position from Another Person perspective
-    void ReceiveRemoteCoordinate(const char* data);
-    std::optional<const char*> GetCoordBuffer();
+    // Display Bullet Fire Position from Another Person perspective
+    void ReceiveRemoteCoordinate(std::string_view data);
+    std::optional<std::string_view> GetCoordBuffer();
     void UpdateCoordBufferQueue();
 
     bool bHasWinner = false;
@@ -32,6 +33,6 @@ private:
     std::queue<char> m_PendingLocalGameInput;
     std::queue<char> m_PendingRemoteGameInput;
 
-    std::queue<const char*> m_coordinateBuffer;
+    std::queue<std::string> m_coordinateBuffer;
 };
 

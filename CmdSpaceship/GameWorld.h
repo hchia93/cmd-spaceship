@@ -3,6 +3,8 @@
 // Standard Library
 #include <thread>
 #include <memory>
+#include <unordered_map>
+#include <functional>
 
 // Project Headers
 #include "Inputs.h"
@@ -14,7 +16,7 @@ class GameWorld
 {
 public:
     GameWorld();
-    ~GameWorld();
+    ~GameWorld() = default;
 
     void CreateSpaceShips();
     void Finalize();
@@ -34,8 +36,12 @@ private:
     void FinalizeNetwork();
 
     bool HasBulletHitRemotePlayer();
-
     bool IsABullet(const int row, const int col, const ENetRole netRole);
+    char GetDisplayCharAt(bool isBodyLocal, bool isBodyRemote,
+                         bool isWingLocal, bool isWingRemote,
+                         bool isHeadLocal, bool isHeadRemote,
+                         bool isBulletLocal, bool isBulletRemote,
+                         bool isWarZone);
   
     InputManager m_InputManager;
     NetworkManager m_NetworkManager;

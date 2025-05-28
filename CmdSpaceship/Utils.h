@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 struct FLocation2D
 {
@@ -11,12 +12,9 @@ struct FLocation2D
     FLocation2D& operator+=(const FLocation2D& P) { X += P.X; Y += P.Y; return *this; }
     FLocation2D& operator-=(const FLocation2D& P) { X -= P.X; Y -= P.Y; return *this; }
     FLocation2D operator+(const FLocation2D& P) const { return FLocation2D(X + P.X, Y + P.Y); }
-    const char* ToString();
-    void FromString(const char* Context);
+    std::string ToString() const;
+    void FromString(const std::string& context);
     static bool IsMatch(int x, int y, const FLocation2D& Location) { return Location.X == x && Location.Y == y; };
-
-private:
-    char LocationString[6];
 };
 
 enum ENetRole

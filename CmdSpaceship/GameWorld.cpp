@@ -8,6 +8,7 @@
 // Standard Library
 #include <iostream>
 #include <string>
+#include <array>
 
 // Project Headers
 #include "GameWorld.h"
@@ -18,38 +19,50 @@
 // https://stackoverflow.com/questions/34842526/update-console-without-flickering-c
 // https://docs.microsoft.com/en-us/windows/console/console-screen-buffers#_win32_character_attributes
 
+// Add this after the includes and before the console functions
+class ConsoleHandle 
+{
+public:
+    static ConsoleHandle& GetInstance() 
+    {
+        static ConsoleHandle m_Instance;
+        return m_Instance;
+    }
+    
+    HANDLE Get() const { return m_Handle; }
+    
+private:
+    ConsoleHandle() : m_Handle(GetStdHandle(STD_OUTPUT_HANDLE)) {}
+    ~ConsoleHandle() = default;
+    ConsoleHandle(const ConsoleHandle&) = delete;
+    ConsoleHandle& operator=(const ConsoleHandle&) = delete;
+    
+    HANDLE m_Handle;
+};
+
 void SetCursorPostion(int x, int y)
 {
-    static const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     std::cout.flush();
-    COORD coordinate = { (SHORT)x, (SHORT)y };
-    SetConsoleCursorPosition(stdHandle, coordinate);
+    COORD coordinate{ static_cast<SHORT>(x), static_cast<SHORT>(y) };
+    SetConsoleCursorPosition(ConsoleHandle::GetInstance().Get(), coordinate);
 }
 
 void SetConsoleColor(unsigned short color)
 {
-    static const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     std::cout.flush();
-    SetConsoleTextAttribute(stdHandle, color);
+    SetConsoleTextAttribute(ConsoleHandle::GetInstance().Get(), color);
 }
 
 void SetCursorInfo()
 {
-    static const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    // Disable cursor blinks in cmd.
-    CONSOLE_CURSOR_INFO info;
-    info.bVisible = false;
-    info.dwSize = 0;
-    SetConsoleCursorInfo(stdHandle, &info);
+    CONSOLE_CURSOR_INFO info{0, false};
+    SetConsoleCursorInfo(ConsoleHandle::GetInstance().Get(), &info);
 }
 
 void SetScreenBufferSize(unsigned int X, unsigned int Y)
 {
-    static const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD coordinate;
-    coordinate.X = X;
-    coordinate.Y = Y;
-    SetConsoleScreenBufferSize(stdHandle, coordinate);
+    COORD coordinate{static_cast<SHORT>(X), static_cast<SHORT>(Y)};
+    SetConsoleScreenBufferSize(ConsoleHandle::GetInstance().Get(), coordinate);
 }
 
 //FOREGROUND_BLUE 	Text color contains blue.
@@ -63,14 +76,39 @@ void SetScreenBufferSize(unsigned int X, unsigned int Y)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Add after the ConsoleHandle class and before GameWorld methods
+struct SpaceshipDisplay {
+    static constexpr char Body = 'H';
+    static constexpr char Wing = '-';
+    static constexpr char LocalHead = 'A';
+    static constexpr char RemoteHead = 'V';
+    static constexpr char LocalBullet = 'o';
+    static constexpr char RemoteBullet = 'x';
+    static constexpr char Empty = ' ';
+    static constexpr char Border = '#';
+};
+
+// Add this helper function before Draw()
+char GameWorld::GetDisplayCharAt(bool isBodyLocal, bool isBodyRemote, 
+                               bool isWingLocal, bool isWingRemote,
+                               bool isHeadLocal, bool isHeadRemote,
+                               bool isBulletLocal, bool isBulletRemote,
+                               bool isWarZone)
+{
+    if (isBodyLocal || isBodyRemote) return SpaceshipDisplay::Body;
+    if (isWingLocal || isWingRemote) return SpaceshipDisplay::Wing;
+    if (isHeadLocal) return SpaceshipDisplay::LocalHead;
+    if (isHeadRemote) return SpaceshipDisplay::RemoteHead;
+    if (isBulletLocal) return SpaceshipDisplay::LocalBullet;
+    if (isBulletRemote) return SpaceshipDisplay::RemoteBullet;
+    if (isWarZone) return SpaceshipDisplay::Empty;
+    return SpaceshipDisplay::Border;
+}
+
 GameWorld::GameWorld()
 {
     CreateSpaceShips();
     InitializeNetwork();
-}
-
-GameWorld::~GameWorld()
-{
 }
 
 void GameWorld::CreateSpaceShips()
@@ -133,25 +171,24 @@ void GameWorld::Update()
         HandleLocalInput();
         HandleRemoteInput();
 
-        m_BulletPoolService.TickAll(); // Update all bullet positions.
+        m_BulletPoolService.TickAll();
         if (HasBulletHitRemotePlayer())
         {
-            m_InputManager.bHasWinner = true; // local. remote will get set later
+            m_InputManager.bHasWinner = true;
             m_NetworkManager.Send("", ENET_WINNER_CHANNEL);
         }
     }
 
     Draw();
-    //DrawRecvData();
 
     if (m_InputManager.bHasWinner)
     {
-        static const std::string LoseMessage = "Enemy Wins. You Lose.";
-        static const std::string WinMessage = "You hit the enemy. You won.";
-        const std::string* Message = m_InputManager.bLoseFlag ? &LoseMessage : &WinMessage;
+        static constexpr std::string_view LoseMessage = "Enemy Wins. You Lose.";
+        static constexpr std::string_view WinMessage = "You hit the enemy. You won.";
+        const auto& message = m_InputManager.bLoseFlag ? LoseMessage : WinMessage;
 
-        SetCursorPostion(SCREEN_X_MAX / 2 - ((int)Message->length() / 2), SCREEN_Y_MAX / 2);
-        printf("%s", Message->c_str());
+        SetCursorPostion(SCREEN_X_MAX / 2 - (static_cast<int>(message.length()) / 2), SCREEN_Y_MAX / 2);
+        std::cout << message;
     }
 
     Sleep(20);
@@ -164,43 +201,38 @@ void GameWorld::Draw()
         return;
     }
 
-    bool bBodyLocal, bBodyRemote;
-    bool bLeftWingLocal, bRightWingLocal; // LeftWingLocal = RightWingRemote check
-    bool bLeftWingRemote, bRightWingRemote; // RightWingLocal = LeftWingRemote check.
-    bool bHeadLocal;
-    bool bHeadRemote;
-    bool bWarZone;
-    bool bBulletLocal, bBulletRemote;
-
-    FLocation2D localPosition = m_LocalSpaceShip->GetLocation();
-    FLocation2D remotePosition = m_RemoteSpaceShip->GetLocation();
+    const FLocation2D localPosition = m_LocalSpaceShip->GetLocation();
+    const FLocation2D remotePosition = m_RemoteSpaceShip->GetLocation();
 
     for (int col = 0; col < SCREEN_Y_MAX; ++col)
     {
         for (int row = 0; row < SCREEN_X_MAX; ++row)
         {
+            const bool bBodyLocal = FLocation2D::IsMatch(row, col, localPosition);
+            const bool bHeadLocal = FLocation2D::IsMatch(row, col, localPosition + FLocation2D(0, -1));
+            const bool bLeftWingLocal = FLocation2D::IsMatch(row, col, localPosition + FLocation2D(-1, 0));
+            const bool bRightWingLocal = FLocation2D::IsMatch(row, col, localPosition + FLocation2D(+1, 0));
+            const bool bBulletLocal = IsABullet(row, col, ENetRole::LOCAL);
+
+            const bool bBodyRemote = FLocation2D::IsMatch(row, col, remotePosition);
+            const bool bHeadRemote = FLocation2D::IsMatch(row, col, remotePosition + FLocation2D(0, +1));
+            const bool bLeftWingRemote = FLocation2D::IsMatch(row, col, remotePosition + FLocation2D(-1, 0));
+            const bool bRightWingRemote = FLocation2D::IsMatch(row, col, remotePosition + FLocation2D(+1, 0));
+            const bool bBulletRemote = IsABullet(row, col, ENetRole::REMOTE);
+
+            const bool bWarZone = (row > 0) && (row < SCREEN_X_MAX - 1) && (col > 0) && (col < SCREEN_Y_MAX - 1);
+
             SetCursorPostion(row, col);
-            bBodyLocal = FLocation2D::IsMatch(row, col, localPosition);
-            bHeadLocal = FLocation2D::IsMatch(row, col, localPosition + FLocation2D(0, -1));
-            bLeftWingLocal = FLocation2D::IsMatch(row, col, localPosition + FLocation2D(-1, 0));
-            bRightWingLocal = FLocation2D::IsMatch(row, col, localPosition + FLocation2D(+1, 0));
 
-            bBulletLocal = IsABullet(row, col, ENetRole::LOCAL);
-
-            bBodyRemote = FLocation2D::IsMatch(row, col, remotePosition);
-            bHeadRemote = FLocation2D::IsMatch(row, col, remotePosition + FLocation2D(0, +1));
-            bRightWingRemote = FLocation2D::IsMatch(row, col, remotePosition + FLocation2D(1, 0));
-            bLeftWingRemote = FLocation2D::IsMatch(row, col, remotePosition + FLocation2D(-1, 0));
-
-            bBulletRemote = IsABullet(row, col, ENetRole::REMOTE);
-
-            bWarZone = (row > 0) && (row < SCREEN_X_MAX - 1) && (col > 0) && (col < SCREEN_Y_MAX - 1);
-
-            if (bBodyLocal || bHeadLocal || bLeftWingLocal || bRightWingLocal || bBulletLocal)
+            // Set color based on what we're drawing
+            const bool isLocalPart = bBodyLocal || bHeadLocal || bLeftWingLocal || bRightWingLocal || bBulletLocal;
+            const bool isRemotePart = bBodyRemote || bHeadRemote || bLeftWingRemote || bRightWingRemote || bBulletRemote;
+            
+            if (isLocalPart)
             {
                 SetConsoleColor(FOREGROUND_GREEN | FOREGROUND_RED);
             }
-            else if (bBodyRemote || bHeadRemote || bLeftWingRemote || bRightWingRemote || bBulletRemote)
+            else if (isRemotePart)
             {
                 SetConsoleColor(FOREGROUND_GREEN | FOREGROUND_BLUE);
             }
@@ -209,38 +241,14 @@ void GameWorld::Draw()
                 SetConsoleColor(FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED);
             }
 
-            if (bBodyLocal || bBodyRemote)
-            {
-                printf("H");
-            }
-            else if (bLeftWingLocal || bRightWingLocal || bLeftWingRemote || bRightWingRemote)
-            {
-                printf("-");
-            }
-            else if (bHeadLocal)
-            {
-                printf("A");
-            }
-            else if (bHeadRemote)
-            {
-                printf("V");
-            }
-            else if (bBulletLocal)
-            {
-                printf("o");
-            }
-            else if (bBulletRemote)
-            {
-                printf("x");
-            }
-            else if (bWarZone)
-            {
-                printf(" ");
-            }
-            else
-            {
-                printf("#");
-            }
+            // Get and print the character
+            const char displayChar = GetDisplayCharAt(bBodyLocal, bBodyRemote,
+                                                    bLeftWingLocal || bRightWingLocal,
+                                                    bLeftWingRemote || bRightWingRemote,
+                                                    bHeadLocal, bHeadRemote,
+                                                    bBulletLocal, bBulletRemote,
+                                                    bWarZone);
+            putchar(displayChar);
         }
         putchar('\n');
     }
@@ -250,10 +258,11 @@ void GameWorld::DrawRecvData()
 {
     SetCursorPostion(0, SCREEN_Y_MAX + m_BufferLineCounter);
     printf("%20s", " ");
-    if (m_InputManager.GetCoordBuffer())
+    if (auto coordBuffer = m_InputManager.GetCoordBuffer())
     {
         SetCursorPostion(0, SCREEN_Y_MAX + m_BufferLineCounter);
-        printf("%s", m_InputManager.GetCoordBuffer().value());
+        std::string coordStr{coordBuffer.value()};
+        printf("%s", coordStr.c_str());
         m_BufferLineCounter++;
         m_InputManager.UpdateCoordBufferQueue();
 
@@ -271,48 +280,29 @@ bool GameWorld::HasBulletHitRemotePlayer()
         return false;
     }
 
-    // Get remote ship's position
     const FLocation2D& remotePosition = m_RemoteSpaceShip->GetLocation();
-
-    // Check ship's body position
-    if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(remotePosition))
+    
+    // Define all positions to check
+    const std::array<FLocation2D, 4> checkPositions = {
+        remotePosition,                          // body
+        remotePosition + FLocation2D(0, +1),     // head
+        remotePosition + FLocation2D(-1, 0),     // left wing
+        remotePosition + FLocation2D(+1, 0)      // right wing
+    };
+    
+    // Check all positions
+    for (const auto& pos : checkPositions)
     {
-        if (pBullet->GetOwner() == m_LocalSpaceShip.get())
+        if (auto* pBullet = m_BulletPoolService.GetActiveBulletAt(pos))
         {
-            pBullet->Deactivate();
-            return true;
+            if (pBullet->GetOwner() == m_LocalSpaceShip.get())
+            {
+                pBullet->Deactivate();
+                return true;
+            }
         }
     }
-
-    // Check ship's head position (one unit above body)
-    if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(remotePosition + FLocation2D(0, +1)))
-    {
-        if (pBullet->GetOwner() == m_LocalSpaceShip.get())
-        {
-            pBullet->Deactivate();
-            return true;
-        }
-    }
-
-    // Check ship's wings positions
-    if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(remotePosition + FLocation2D(-1, 0)))
-    {
-        if (pBullet->GetOwner() == m_LocalSpaceShip.get())
-        {
-            pBullet->Deactivate();
-            return true;
-        }
-    }
-
-    if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(remotePosition + FLocation2D(+1, 0)))
-    {
-        if (pBullet->GetOwner() == m_LocalSpaceShip.get())
-        {
-            pBullet->Deactivate();
-            return true;
-        }
-    }
-
+    
     return false;
 }
 
@@ -340,30 +330,26 @@ void GameWorld::HandleLocalInput()
         m_InputManager.ReceiveLocalGameInput(_getch());
     }
 
-    if (m_InputManager.GetLocalPendingInput())
+    if (auto input = m_InputManager.GetLocalPendingInput())
     {
-        char key = m_InputManager.GetLocalPendingInput().value(); // deref std::optional
-
-        if (key == 'a')
+        const char key = input.value();
+        switch (key)
         {
-            m_LocalSpaceShip->MoveLeft();
-        }
-        else if (key == 'd')
-        {
-            m_LocalSpaceShip->MoveRight();
-        }
-        else if (key == 'w')
-        {
-            if (Bullet* pBullet = m_LocalSpaceShip->Shoot())
-            {
-                // Notify a remote Shoot
-                const char* bulletLocationBuffer = pBullet->GetLocation().ToString();
-                m_NetworkManager.Send(bulletLocationBuffer, ENetChannel::ENET_BULLET_CHANNEL);
-            }
-        }
-        else if (key == 'q')
-        {
-            Exit();
+            case 'a':
+                m_LocalSpaceShip->MoveLeft();
+                break;
+            case 'd':
+                m_LocalSpaceShip->MoveRight();
+                break;
+            case 'w':
+                if (auto* pBullet = m_LocalSpaceShip->Shoot())
+                {
+                    m_NetworkManager.Send(pBullet->GetLocation().ToString(), ENetChannel::ENET_BULLET_CHANNEL);
+                }
+                break;
+            case 'q':
+                Exit();
+                break;
         }
         m_InputManager.UpdateLocalInputQueue();
     }
@@ -371,22 +357,21 @@ void GameWorld::HandleLocalInput()
 
 void GameWorld::HandleRemoteInput()
 {
-    if (m_InputManager.GetRemotePendingInput())
+    if (auto input = m_InputManager.GetRemotePendingInput())
     {
-        char key = m_InputManager.GetRemotePendingInput().value(); // deref std::optional
-        if (key == 'a')
+        const char key = input.value();
+        switch (key)
         {
-            m_RemoteSpaceShip->MoveLeft();
+            case 'a':
+                m_RemoteSpaceShip->MoveLeft();
+                break;
+            case 'd':
+                m_RemoteSpaceShip->MoveRight();
+                break;
+            case 'w':
+                m_RemoteSpaceShip->Shoot();
+                break;
         }
-        else if (key == 'd')
-        {
-            m_RemoteSpaceShip->MoveRight();
-        }
-        else if (key == 'w')
-        {
-            m_RemoteSpaceShip->Shoot();
-        }
-
         m_InputManager.UpdateRemoteInputQueue();
     }
 }

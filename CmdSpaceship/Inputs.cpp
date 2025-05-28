@@ -71,26 +71,28 @@ void InputManager::UpdateRemoteInputQueue()
     m_PendingRemoteGameInput.pop();
 }
 
-void InputManager::ReceiveRemoteCoordinate(const char* data)
+void InputManager::ReceiveRemoteCoordinate(std::string_view data)
 {
     // Remove token!
-
     // Make into Location!
-    m_coordinateBuffer.push(data);
+    m_coordinateBuffer.push(std::string(data));
 }
 
-std::optional<const char*> InputManager::GetCoordBuffer()
+std::optional<std::string_view> InputManager::GetCoordBuffer()
 {
-    if (m_coordinateBuffer.size() > 0)
+    if (!m_coordinateBuffer.empty())
     {
-        return m_coordinateBuffer.front();
+        return std::string_view(m_coordinateBuffer.front());
     }
-    return {};
+    return std::nullopt;
 }
 
 void InputManager::UpdateCoordBufferQueue()
 {
-    m_coordinateBuffer.pop();
+    if (!m_coordinateBuffer.empty())
+    {
+        m_coordinateBuffer.pop();
+    }
 }
 
 void InputManager::UpdatePendingSendGameInputQueue()

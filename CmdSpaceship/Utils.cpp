@@ -3,23 +3,16 @@
 
 // https://www.systutorials.com/131/convert-string-to-int-and-reverse/
 
-const char* FLocation2D::ToString()
+std::string FLocation2D::ToString() const
 {
-    std::stringstream ssx;
-    ssx << X;
-    std::string xcoord = ssx.str();
-
-    std::stringstream ssy;
-    ssy << Y;
-    std::string ycoord = ssy.str();
-    std::string coord = xcoord + "," + ycoord;
-
-    strcpy_s(LocationString, 6, coord.c_str());
-
-    return LocationString;
+    std::stringstream ss;
+    ss << X << "," << Y;
+    return ss.str();
 }
 
-void FLocation2D::FromString(const char* Context)
+void FLocation2D::FromString(const std::string& context)
 {
-    //std::istringstream is()
+    std::stringstream ss(context);
+    char comma;
+    ss >> X >> comma >> Y;
 }

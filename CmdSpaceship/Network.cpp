@@ -60,11 +60,8 @@ void NetworkManager::Initialize()
 
 void NetworkManager::TaskSend()
 {
-    char data[DEFAULT_BUFLEN];
-
     if (bInitialized)
     {
-
 #if DEBUG_LOG_FILE
         SERVER_ONLY(netSendLog.open("NetSendLogServer.txt"))
         CLIENT_ONLY(netSendLog.open("NetSendLogClient.txt"))
@@ -73,21 +70,16 @@ void NetworkManager::TaskSend()
         while (true)
         {
             // Read from Pending GameInput
-            if (std::optional<char> PendingChar = m_InputManager->GetPendingGameInputToSend())
+            if (auto pendingChar = m_InputManager->GetPendingGameInputToSend())
             {
-                char key[5];
-                GetNetStringToken(key, ENET_INPUT_CHANNEL);
-                key[3] = *PendingChar;
-                key[4] = '\0';
-                const char* source = key;
+                std::string key = GetNetStringToken(ENET_INPUT_CHANNEL);
+                key += *pendingChar;
 
-                strcpy_s(data, sizeof(source), source);
-
-                int ret = m_Network->Send(data);
+                int result = m_Network->Send(key);
 #if DEBUG_LOG_FILE
-                netSendLog.write(data, 32);
+                netSendLog.write(key.c_str(), key.length());
 #endif // DEBUG_LOG_FILE
-                if (ret > 0)
+                if (result > 0)
                 {
                     m_InputManager->UpdatePendingSendGameInputQueue();
                 }
@@ -98,7 +90,8 @@ void NetworkManager::TaskSend()
 
 void NetworkManager::TaskReceive()
 {
-    char data[DEFAULT_BUFLEN];
+    std::string data;
+    data.reserve(DEFAULT_BUFLEN);
 
     if (bInitialized)
     {
@@ -113,7 +106,7 @@ void NetworkManager::TaskReceive()
             if (result > 0)
             {
 #if DEBUG_LOG_FILE
-                netRecvLog.write(data, 32);
+                netRecvLog.write(data.c_str(), data.length());
 #endif //DEBUG_LOG_FILE
                 // INPUT CHANNEL
                 if (data[1] == '0')
@@ -122,10 +115,7 @@ void NetworkManager::TaskReceive()
                 }
                 else if (data[1] == '1')
                 {
-                    char bulletCoord[16]; // Copy to this one as the Data is mod
-                    const char* coordData = bulletCoord;
-                    strcpy_s(bulletCoord, 16, data);
-                    m_InputManager->ReceiveRemoteCoordinate(bulletCoord);
+                    m_InputManager->ReceiveRemoteCoordinate(data);
                 }
                 else if (data[1] == '2') // Receive a win packet
                 {
@@ -137,33 +127,20 @@ void NetworkManager::TaskReceive()
     }
 }
 
-void NetworkManager::Send(const char* context, ENetChannel ID)
+void NetworkManager::Send(std::string_view context, ENetChannel ID)
 {
     assert(ID != 0); // Input handled by Threading Tick already, sending explicitly is not allowed.
 
-    char data[DEFAULT_BUFLEN];
-    char token[4];
-    GetNetStringToken(token, ID);
-
-    strcpy_s(data, 4, token); // Copy {token} first, then append context.
-    const char* ptr = data;
-    strcpy_s(data + 3, sizeof(context), context);
-
+    std::string data = GetNetStringToken(ID);
+    data += context;
     m_Network->Send(data);
 }
 
-void NetworkManager::GetNetStringToken(char* destination, ENetChannel netChannel)
+std::string NetworkManager::GetNetStringToken(ENetChannel netChannel)
 {
-    if (destination == nullptr)
-    {
-        return;
-    }
-
     std::stringstream ss;
-    ss << (int)netChannel;
-    std::string token = "{" + ss.str() + "}";
-
-    strcpy_s(destination, 4, token.c_str());
+    ss << "{" << static_cast<int>(netChannel) << "}";
+    return ss.str();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -223,15 +200,14 @@ int NetworkServer::Setup()
     return RESULT_SUCCEED;
 }
 
-int NetworkServer::Send(const char* context)
+int NetworkServer::Send(std::string_view context)
 {
-    // Why are you sending empty buffer?
-    if (context == nullptr)
+    if (context.empty())
     {
         return RESULT_ERROR;
     }
 
-    int result = send(m_ClientSocket, context, (int)(strlen(context) + 1), 0);
+    int result = send(m_ClientSocket, context.data(), static_cast<int>(context.length() + 1), 0);
     if (result == SOCKET_ERROR)
     {
         NET_LOG("[Server] Send failed with error: %d\n", WSAGetLastError());
@@ -240,25 +216,14 @@ int NetworkServer::Send(const char* context)
     return result;
 }
 
-int NetworkServer::Receive(char* context)
+int NetworkServer::Receive(std::string& context)
 {
     char recvbuf[DEFAULT_BUFLEN];
-    int recvbuflen = DEFAULT_BUFLEN;
-
-    int result = recv(m_ClientSocket, recvbuf, recvbuflen, 0);
+    int result = recv(m_ClientSocket, recvbuf, DEFAULT_BUFLEN, 0);
     if (result > 0)
     {
-        strcpy_s(context, sizeof(recvbuf), recvbuf);
+        context.assign(recvbuf, result);
     }
-    else if (result == 0)
-    {
-        // Nothing coming in
-    }
-    else
-    {
-        NET_LOG("[Server] Receive failed with error: %d\n", WSAGetLastError());
-    }
-
     return result;
 }
 
@@ -289,7 +254,7 @@ int NetworkServer::CreateListenSocketAndAcceptClient()
     }
 
     // Setup the TCP listening socket
-    int result = bind(m_ListenSocket, m_AddressResult->ai_addr, (int)m_AddressResult->ai_addrlen);
+    int result = bind(m_ListenSocket, m_AddressResult->ai_addr, static_cast<int>(m_AddressResult->ai_addrlen));
     if (result == SOCKET_ERROR)
     {
         NET_LOG("[Server] Bind failed with error: %d\n", WSAGetLastError());
@@ -339,7 +304,7 @@ int NetworkClient::Initialize()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
-    int result = getaddrinfo(m_Target, DEFAULT_PORT, &hints, &m_AddressResult);
+    int result = getaddrinfo(m_Target.c_str(), DEFAULT_PORT, &hints, &m_AddressResult);
     if (result != 0)
     {
         NET_LOG("[Client] getaddrinfo failed with error: %d\n", ret);
@@ -361,15 +326,14 @@ int NetworkClient::Setup()
     return RESULT_SUCCEED;
 }
 
-int NetworkClient::Send(const char* context)
+int NetworkClient::Send(std::string_view context)
 {
-    if (context == nullptr)
+    if (context.empty())
     {
         return RESULT_ERROR;
     }
 
-    //Send one more character to allow termnating character to be sent.
-    int result = send(m_ConnectSocket, context, (int)(strlen(context) + 1), 0);
+    int result = send(m_ConnectSocket, context.data(), static_cast<int>(context.length() + 1), 0);
     if (result == SOCKET_ERROR)
     {
         NET_LOG("[Client] Send failed with error: %d\n", WSAGetLastError());
@@ -378,25 +342,14 @@ int NetworkClient::Send(const char* context)
     return result;
 }
 
-int NetworkClient::Receive(char* context)
+int NetworkClient::Receive(std::string& context)
 {
     char recvbuf[DEFAULT_BUFLEN];
-    int recvbuflen = DEFAULT_BUFLEN;
-
-    int result = recv(m_ConnectSocket, recvbuf, recvbuflen, 0);
+    int result = recv(m_ConnectSocket, recvbuf, DEFAULT_BUFLEN, 0);
     if (result > 0)
     {
-        strcpy_s(context, sizeof(recvbuf), recvbuf);
+        context.assign(recvbuf, result);
     }
-    else if (result == 0)
-    {
-        // Nothing coming in
-    }
-    else
-    {
-        NET_LOG("[Client] Receive failed with error: %d\n", WSAGetLastError());
-    }
-
     return result;
 }
 
@@ -429,7 +382,7 @@ int NetworkClient::CreateSocketAndConnect()
         }
 
         // Connect to server.
-        int result = connect(m_ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+        int result = connect(m_ConnectSocket, ptr->ai_addr, static_cast<int>(ptr->ai_addrlen));
         if (result == SOCKET_ERROR)
         {
             closesocket(m_ConnectSocket);

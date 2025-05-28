@@ -4,6 +4,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+#include <string>
+#include <string_view>
 
 #include "Macro.h"
 #include "Utils.h"
@@ -44,14 +46,13 @@ public:
 
     void TaskSend(); //Run by threads
     void TaskReceive(); // Run by threads.
-    void Send(const char* Context, ENetChannel ID);
+    void Send(std::string_view Context, ENetChannel ID);
 
     NetworkCommon* GetNetwork() { return m_Network.get(); }
     const bool IsInitialized() { return bInitialized; }
 
 private:
-
-    static void GetNetStringToken(char* Destination, ENetChannel NetChannel);
+    static std::string GetNetStringToken(ENetChannel NetChannel);
 
     std::unique_ptr<NetworkCommon> m_Network;
     InputManager* m_InputManager;
@@ -69,8 +70,8 @@ class NetworkCommon
 public:
     virtual int Initialize();
     virtual int Setup() { return RESULT_NOT_SUPPORTED; };
-    virtual int Send(const char* context) { return RESULT_NOT_SUPPORTED; };
-    virtual int Receive(char* context) { return RESULT_NOT_SUPPORTED; };
+    virtual int Send(std::string_view context) { return RESULT_NOT_SUPPORTED; };
+    virtual int Receive(std::string& context) { return RESULT_NOT_SUPPORTED; };
     virtual int Shutdown() { return RESULT_NOT_SUPPORTED; };
 
 protected:
@@ -82,8 +83,8 @@ class NetworkServer : public NetworkCommon
 public:
     virtual int Initialize() override;
     virtual int Setup() override;
-    virtual int Send(const char* context) override;
-    virtual int Receive(char* context) override;
+    virtual int Send(std::string_view context) override;
+    virtual int Receive(std::string& context) override;
     virtual int Shutdown() override;
 
 private:
@@ -98,15 +99,15 @@ class NetworkClient : public NetworkCommon
 public:
     virtual int Initialize() override;
     virtual int Setup() override;
-    virtual int Send(const char* context) override;
-    virtual int Receive(char* context) override;
+    virtual int Send(std::string_view context) override;
+    virtual int Receive(std::string& context) override;
     virtual int Shutdown() override;
 
-    void SetTarget(char* newTarget) { m_Target = newTarget; } //	set ip as argument 1.
+    void SetTarget(std::string newTarget) { m_Target = std::move(newTarget); }
 
 private:
     int CreateSocketAndConnect();
 
-    char* m_Target;
+    std::string m_Target;
     SOCKET m_ConnectSocket = INVALID_SOCKET;
 };
