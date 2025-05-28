@@ -11,15 +11,15 @@ public:
     void UpdatePendingSendGameInputQueue();
 
     // Helper function to send to game to handle (Local)
-    void ReceiveRemoteGameInput(char Key); // push
-    void ReceiveLocalGameInput(char Key); // push
+    void ReceiveRemoteGameInput(char key); // push
+    void ReceiveLocalGameInput(char key); // push
     std::optional<char> GetLocalPendingInput(); // get
     std::optional<char> GetRemotePendingInput(); // get
     void UpdateLocalInputQueue(); // pop
     void UpdateRemoteInputQueue(); // pop
 
     // Diplay Bullet Fire Position from Another Person perspective
-    void ReceiveRemoteCoordinate(const char* Data);
+    void ReceiveRemoteCoordinate(const char* data);
     std::optional<const char*> GetCoordBuffer();
     void UpdateCoordBufferQueue();
 
@@ -28,10 +28,10 @@ public:
 
 private:
 
-    std::queue<char> PendingGameInputToSend;
-    std::queue<char> PendingLocalGameInput;
-    std::queue<char> PendingRemoteGameInput;
+    std::queue<char> m_PendingGameInputToSend;
+    std::queue<char> m_PendingLocalGameInput;
+    std::queue<char> m_PendingRemoteGameInput;
 
-    std::queue<const char*> CoordBuffer;
+    std::queue<const char*> m_coordinateBuffer;
 };
 

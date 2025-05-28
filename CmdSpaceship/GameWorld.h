@@ -42,8 +42,8 @@ private:
     std::thread m_NetworkReceiverThread;
     std::thread m_NetworkSenderThread;
 
-    std::unique_ptr<Spaceship> pLocalSpaceShip;
-    std::unique_ptr<Spaceship> pRemoteSpaceShip;
+    std::unique_ptr<Spaceship> m_LocalSpaceShip;
+    std::unique_ptr<Spaceship> m_RemoteSpaceShip;
     BulletPoolService m_BulletPoolService;
 
     int m_BufferLineCounter = 0;

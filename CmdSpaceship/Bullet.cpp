@@ -2,25 +2,25 @@
 #include "Bullet.h"
 #include "Spaceship.h"
 
-void Bullet::Activate(BulletSpawnParam Param)
+void Bullet::Activate(BulletSpawnParam param)
 {
-    if (Param.Instigator != nullptr)
+    if (param.instigator != nullptr)
     {
-        m_Location = Param.Instigator->GetLocation();
-        bool IsLocal = Param.Instigator->GetNetRole() == ENetRole::LOCAL;
+        m_Location = param.instigator->GetLocation();
+        const bool isLocal = param.instigator->GetNetRole() == ENetRole::LOCAL;
 
-        // Resolved Location
-        if (IsLocal)
+        // Resolved Nozzle Location
+        if (isLocal)
         {
-            m_Location.Y = Param.Instigator->GetLocation().Y - 1;
+            m_Location.Y = param.instigator->GetLocation().Y - 1;
         }
         else
         {
-            m_Location.Y = Param.Instigator->GetLocation().Y + 1;
+            m_Location.Y = param.instigator->GetLocation().Y + 1;
         }
 
-        m_Direction = IsLocal ? EDirection::Up : EDirection::Down;
-        m_Owner = Param.Instigator;
+        m_Direction = isLocal ? EDirection::Up : EDirection::Down;
+        m_Owner = param.instigator;
         bIsActive = true;
     }
 }
@@ -31,9 +31,9 @@ void Bullet::Tick()
     {
     case EDirection::Up:
     {
-        if (m_Location.X >= 0 && m_Location.X <= SCREEN_X_MAX - 1)
+        if (m_Location.Y >= 0 && m_Location.Y <= SCREEN_Y_MAX - 1)
         {
-            m_Location.X += 1;
+            m_Location.Y -= 1;
         }
         else
         {
@@ -43,9 +43,9 @@ void Bullet::Tick()
     }
     case EDirection::Down:
     {
-        if (m_Location.X >= 0 && m_Location.X <= SCREEN_X_MAX - 1)
+        if (m_Location.Y >= 0 && m_Location.Y <= SCREEN_Y_MAX - 1)
         {
-            m_Location.X -= 1;
+            m_Location.Y += 1;
         }
         else
         {

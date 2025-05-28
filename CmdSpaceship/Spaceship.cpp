@@ -1,11 +1,11 @@
 #include "Spaceship.h"
 #include "Bullet.h"
 
-Spaceship::Spaceship(SpaceShipSpawnParam Param)
+Spaceship::Spaceship(SpaceShipSpawnParam param)
 {
-    m_NetRole = Param.NetRole;
-    m_Location = Param.SpawnLocation;
-    m_RequestBulletDelegate = Param.SpawnFunction;
+    m_NetRole = param.netRole;
+    m_Location = param.spawnLocation;
+    m_RequestBulletDelegate = param.spawnBulletFunction;
 }
 
 Bullet* Spaceship::Shoot()
@@ -15,7 +15,7 @@ Bullet* Spaceship::Shoot()
         if (Bullet* pBullet = m_RequestBulletDelegate())
         {
             BulletSpawnParam param;
-            param.Instigator = this;
+            param.instigator = this;
 
             pBullet->Activate(param);
             return pBullet;
@@ -26,25 +26,45 @@ Bullet* Spaceship::Shoot()
 
 void Spaceship::MoveLeft()
 {
-    if (m_NetRole == ENetRole::LOCAL)
+    const bool isLocal = m_NetRole == ENetRole::LOCAL;
+    if (isLocal)
     {
         m_Location.X -= 1;
+        if (m_Location.X <= 2)
+        {
+            m_Location.X = 2;
+        }
+
     }
     else
     {
         m_Location.X += 1;
+        if (m_Location.X >= SCREEN_X_MAX - 3)
+        {
+            m_Location.X = SCREEN_X_MAX - 3;
+        }
     }
 }
 
 void Spaceship::MoveRight()
 {
-    if (m_NetRole == ENetRole::LOCAL)
+    const bool isLocal = m_NetRole == ENetRole::LOCAL;
+
+    if (isLocal)
     {
         m_Location.X += 1;
+        if (m_Location.X >= SCREEN_X_MAX - 3)
+        {
+            m_Location.X = SCREEN_X_MAX - 3;
+        }
     }
     else
     {
         m_Location.X -= 1;
+        if (m_Location.X <= 2)
+        {
+            m_Location.X = 2;
+        }
     }
 }
 

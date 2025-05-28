@@ -10,15 +10,15 @@ class Bullet;
 
 struct SpaceShipSpawnParam
 {
-    std::function<Bullet* ()> SpawnFunction;
-    FLocation2D SpawnLocation;
-    ENetRole NetRole;
+    std::function<Bullet* ()> spawnBulletFunction;
+    FLocation2D spawnLocation;
+    ENetRole netRole;
 };
 
 class Spaceship
 {
 public:
-    Spaceship(SpaceShipSpawnParam Param);
+    Spaceship(SpaceShipSpawnParam param);
 
     Bullet* Shoot();
     void MoveLeft();

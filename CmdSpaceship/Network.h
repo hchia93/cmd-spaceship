@@ -40,21 +40,21 @@ public:
     ~NetworkManager();
 
     void Initialize();
-    void SetInputManager(InputManager* Manager);
+    void SetInputManager(InputManager* manager);
 
     void TaskSend(); //Run by threads
     void TaskReceive(); // Run by threads.
     void Send(const char* Context, ENetChannel ID);
 
-    NetworkCommon* GetNetwork() { return pNetwork.get(); }
+    NetworkCommon* GetNetwork() { return m_Network.get(); }
     const bool IsInitialized() { return bInitialized; }
 
 private:
 
     static void GetNetStringToken(char* Destination, ENetChannel NetChannel);
 
-    std::unique_ptr<NetworkCommon> pNetwork;
-    InputManager* pInputManager;
+    std::unique_ptr<NetworkCommon> m_Network;
+    InputManager* m_InputManager;
 
     bool bInitialized = false;
 
@@ -69,12 +69,12 @@ class NetworkCommon
 public:
     virtual int Initialize();
     virtual int Setup() { return RESULT_NOT_SUPPORTED; };
-    virtual int Send(const char* Context) { return RESULT_NOT_SUPPORTED; };
-    virtual int Receive(char* Context) { return RESULT_NOT_SUPPORTED; };
+    virtual int Send(const char* context) { return RESULT_NOT_SUPPORTED; };
+    virtual int Receive(char* context) { return RESULT_NOT_SUPPORTED; };
     virtual int Shutdown() { return RESULT_NOT_SUPPORTED; };
 
 protected:
-    struct addrinfo* AddressResult;
+    struct addrinfo* m_AddressResult;
 };
 
 class NetworkServer : public NetworkCommon
@@ -82,15 +82,15 @@ class NetworkServer : public NetworkCommon
 public:
     virtual int Initialize() override;
     virtual int Setup() override;
-    virtual int Send(const char* Context) override;
-    virtual int Receive(char* Context) override;
+    virtual int Send(const char* context) override;
+    virtual int Receive(char* context) override;
     virtual int Shutdown() override;
 
 private:
     int CreateListenSocketAndAcceptClient();
 
-    SOCKET ListenSocket = INVALID_SOCKET;
-    SOCKET ClientSocket = INVALID_SOCKET;
+    SOCKET m_ListenSocket = INVALID_SOCKET;
+    SOCKET m_ClientSocket = INVALID_SOCKET;
 };
 
 class NetworkClient : public NetworkCommon
@@ -98,15 +98,15 @@ class NetworkClient : public NetworkCommon
 public:
     virtual int Initialize() override;
     virtual int Setup() override;
-    virtual int Send(const char* Context) override;
-    virtual int Receive(char* Context) override;
+    virtual int Send(const char* context) override;
+    virtual int Receive(char* context) override;
     virtual int Shutdown() override;
 
-    void SetTarget(char* NewTarget) { Target = NewTarget; } //	set ip as argument 1.
+    void SetTarget(char* newTarget) { m_Target = newTarget; } //	set ip as argument 1.
 
 private:
     int CreateSocketAndConnect();
 
-    char* Target;
-    SOCKET ConnectSocket = INVALID_SOCKET;
+    char* m_Target;
+    SOCKET m_ConnectSocket = INVALID_SOCKET;
 };

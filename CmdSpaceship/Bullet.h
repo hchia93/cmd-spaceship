@@ -5,13 +5,13 @@ class Spaceship;
 
 struct BulletSpawnParam
 {
-    Spaceship* Instigator;
+    Spaceship* instigator;
 };
 
 class Bullet
 {
 public:
-    void Activate(BulletSpawnParam Param);
+    void Activate(BulletSpawnParam param);
     void Deactivate();
     const bool IsActive() { return bIsActive; }
 

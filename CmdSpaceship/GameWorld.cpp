@@ -20,36 +20,36 @@
 
 void SetCursorPostion(int x, int y)
 {
-    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    static const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     std::cout.flush();
-    COORD coord = { (SHORT)x, (SHORT)y };
-    SetConsoleCursorPosition(hOut, coord);
+    COORD coordinate = { (SHORT)x, (SHORT)y };
+    SetConsoleCursorPosition(stdHandle, coordinate);
 }
 
 void SetConsoleColor(unsigned short color)
 {
-    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    static const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     std::cout.flush();
-    SetConsoleTextAttribute(hOut, color);
+    SetConsoleTextAttribute(stdHandle, color);
 }
 
 void SetCursorInfo()
 {
-    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    static const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     // Disable cursor blinks in cmd.
-    CONSOLE_CURSOR_INFO Info;
-    Info.bVisible = false;
-    Info.dwSize = 0;
-    SetConsoleCursorInfo(hOut, &Info);
+    CONSOLE_CURSOR_INFO info;
+    info.bVisible = false;
+    info.dwSize = 0;
+    SetConsoleCursorInfo(stdHandle, &info);
 }
 
 void SetScreenBufferSize(unsigned int X, unsigned int Y)
 {
-    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD coord;
-    coord.X = X;
-    coord.Y = Y;
-    SetConsoleScreenBufferSize(hOut, coord);
+    static const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD coordinate;
+    coordinate.X = X;
+    coordinate.Y = Y;
+    SetConsoleScreenBufferSize(stdHandle, coordinate);
 }
 
 //FOREGROUND_BLUE 	Text color contains blue.
@@ -76,17 +76,17 @@ GameWorld::~GameWorld()
 void GameWorld::CreateSpaceShips()
 {
     SpaceShipSpawnParam localSpawnParam;
-    localSpawnParam.NetRole = ENetRole::LOCAL;
-    localSpawnParam.SpawnLocation = FLocation2D(SCREEN_X_MAX / 2, SCREEN_Y_MAX - 2);
-    localSpawnParam.SpawnFunction = std::bind(&BulletPoolService::Request, &m_BulletPoolService);
+    localSpawnParam.netRole = ENetRole::LOCAL;
+    localSpawnParam.spawnLocation = FLocation2D(SCREEN_X_MAX / 2, SCREEN_Y_MAX - 2);
+    localSpawnParam.spawnBulletFunction = std::bind(&BulletPoolService::Request, &m_BulletPoolService);
 
     SpaceShipSpawnParam remoteSpawnParam;
-    remoteSpawnParam.NetRole = ENetRole::REMOTE;
-    remoteSpawnParam.SpawnLocation = FLocation2D(SCREEN_X_MAX / 2, 1);
-    remoteSpawnParam.SpawnFunction = std::bind(&BulletPoolService::Request, &m_BulletPoolService);
+    remoteSpawnParam.netRole = ENetRole::REMOTE;
+    remoteSpawnParam.spawnLocation = FLocation2D(SCREEN_X_MAX / 2, 1);
+    remoteSpawnParam.spawnBulletFunction = std::bind(&BulletPoolService::Request, &m_BulletPoolService);
 
-    pLocalSpaceShip = std::make_unique<Spaceship>(localSpawnParam);
-    pRemoteSpaceShip = std::make_unique<Spaceship>(remoteSpawnParam);
+    m_LocalSpaceShip = std::make_unique<Spaceship>(localSpawnParam);
+    m_RemoteSpaceShip = std::make_unique<Spaceship>(remoteSpawnParam);
 
     SetCursorInfo();
     SetScreenBufferSize(CONSOLE_SCREEN_BUFFER_X, CONSOLE_SCREEN_BUFFER_Y);
@@ -123,7 +123,7 @@ void GameWorld::FinalizeNetwork()
 
 void GameWorld::Update()
 {
-    if (!pLocalSpaceShip || !pRemoteSpaceShip)
+    if (!m_LocalSpaceShip || !m_RemoteSpaceShip)
     {
         return;
     }
@@ -159,7 +159,7 @@ void GameWorld::Update()
 
 void GameWorld::Draw()
 {
-    if (!pLocalSpaceShip || !pRemoteSpaceShip)
+    if (!m_LocalSpaceShip || !m_RemoteSpaceShip)
     {
         return;
     }
@@ -172,8 +172,8 @@ void GameWorld::Draw()
     bool bWarZone;
     bool bBulletLocal, bBulletRemote;
 
-    FLocation2D localPosition = pLocalSpaceShip->GetLocation();
-    FLocation2D remotePosition = pRemoteSpaceShip->GetLocation();
+    FLocation2D localPosition = m_LocalSpaceShip->GetLocation();
+    FLocation2D remotePosition = m_RemoteSpaceShip->GetLocation();
 
     for (int col = 0; col < SCREEN_Y_MAX; ++col)
     {
@@ -266,18 +266,18 @@ void GameWorld::DrawRecvData()
 
 bool GameWorld::HasBulletHitRemotePlayer()
 {
-    if (!pRemoteSpaceShip)
+    if (!m_RemoteSpaceShip)
     {
         return false;
     }
 
     // Get remote ship's position
-    const FLocation2D& remotePosition = pRemoteSpaceShip->GetLocation();
+    const FLocation2D& remotePosition = m_RemoteSpaceShip->GetLocation();
 
     // Check ship's body position
     if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(remotePosition))
     {
-        if (pBullet->GetOwner() == pLocalSpaceShip.get())
+        if (pBullet->GetOwner() == m_LocalSpaceShip.get())
         {
             pBullet->Deactivate();
             return true;
@@ -287,7 +287,7 @@ bool GameWorld::HasBulletHitRemotePlayer()
     // Check ship's head position (one unit above body)
     if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(remotePosition + FLocation2D(0, +1)))
     {
-        if (pBullet->GetOwner() == pLocalSpaceShip.get())
+        if (pBullet->GetOwner() == m_LocalSpaceShip.get())
         {
             pBullet->Deactivate();
             return true;
@@ -297,7 +297,7 @@ bool GameWorld::HasBulletHitRemotePlayer()
     // Check ship's wings positions
     if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(remotePosition + FLocation2D(-1, 0)))
     {
-        if (pBullet->GetOwner() == pLocalSpaceShip.get())
+        if (pBullet->GetOwner() == m_LocalSpaceShip.get())
         {
             pBullet->Deactivate();
             return true;
@@ -306,7 +306,7 @@ bool GameWorld::HasBulletHitRemotePlayer()
 
     if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(remotePosition + FLocation2D(+1, 0)))
     {
-        if (pBullet->GetOwner() == pLocalSpaceShip.get())
+        if (pBullet->GetOwner() == m_LocalSpaceShip.get())
         {
             pBullet->Deactivate();
             return true;
@@ -318,7 +318,7 @@ bool GameWorld::HasBulletHitRemotePlayer()
 
 bool GameWorld::IsABullet(const int row, const int col, const ENetRole netRole)
 {
-    if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(FLocation2D(col, row)))
+    if (Bullet* pBullet = m_BulletPoolService.GetActiveBulletAt(FLocation2D(row, col)))
     {
         if (pBullet->GetOwner()->GetNetRole() == netRole)
         {
@@ -346,15 +346,15 @@ void GameWorld::HandleLocalInput()
 
         if (key == 'a')
         {
-            pLocalSpaceShip->MoveLeft();
+            m_LocalSpaceShip->MoveLeft();
         }
         else if (key == 'd')
         {
-            pLocalSpaceShip->MoveRight();
+            m_LocalSpaceShip->MoveRight();
         }
         else if (key == 'w')
         {
-            if (Bullet* pBullet = pLocalSpaceShip->Shoot())
+            if (Bullet* pBullet = m_LocalSpaceShip->Shoot())
             {
                 // Notify a remote Shoot
                 const char* bulletLocationBuffer = pBullet->GetLocation().ToString();
@@ -376,15 +376,15 @@ void GameWorld::HandleRemoteInput()
         char key = m_InputManager.GetRemotePendingInput().value(); // deref std::optional
         if (key == 'a')
         {
-            pRemoteSpaceShip->MoveLeft();
+            m_RemoteSpaceShip->MoveLeft();
         }
         else if (key == 'd')
         {
-            pRemoteSpaceShip->MoveRight();
+            m_RemoteSpaceShip->MoveRight();
         }
         else if (key == 'w')
         {
-            pRemoteSpaceShip->Shoot();
+            m_RemoteSpaceShip->Shoot();
         }
 
         m_InputManager.UpdateRemoteInputQueue();
