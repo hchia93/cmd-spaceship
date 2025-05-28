@@ -8,8 +8,9 @@ class BulletPoolService
 public:
     Bullet* Request();
     void TickAll();
+    Bullet* GetActiveBulletAt(const FLocation2D& location);
+    void DeactivateAll();
 
-    Bullet* GetActiveBulletAt(FLocation2D Location);
 private:
     std::vector<std::unique_ptr<Bullet>> m_Pool;
 };

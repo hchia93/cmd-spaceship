@@ -25,9 +25,9 @@ enum ENetRole
 
 enum EDirection
 {
-    Unknown,
-    Up,
-    Right,
-    Down,
-    Left
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    NONE
 };

@@ -8,6 +8,7 @@
 #include <string_view>
 #include <chrono>
 #include <atomic>
+#include <functional>
 
 #include "Macro.h"
 #include "Utils.h"
@@ -32,9 +33,10 @@ class NetworkCommon;
 
 enum ENetChannel
 {
-    ENET_INPUT_CHANNEL, // Sending WASD Input, Single key only. {0}x\0 = 5 char
-    ENET_BULLET_CHANNEL, // Sending Bullet Coord, {1} ... = 8 max char
-    ENET_WINNER_CHANNEL,
+    INPUT_CHANNEL,    // Sending WASD Input, Single key only. {0}x\0 = 5 char
+    BULLET_CHANNEL,   // Sending Bullet Coord, {1} ... = 8 max char
+    WINNER_CHANNEL,
+    RESET_CHANNEL,    // Synchronize game reset between players
 };
 
 class NetworkManager
@@ -47,6 +49,7 @@ public:
 
     void Initialize();
     void SetInputManager(InputManager* manager);
+    void SetOnWinMessageReceived(std::function<void()> callback) { m_OnWinMessageReceived = callback; }
 
     void TaskSend(); //Run by threads
     void TaskReceive(); // Run by threads.
@@ -61,6 +64,7 @@ private:
 
     std::unique_ptr<NetworkCommon> m_Network;
     InputManager* m_InputManager;
+    std::function<void()> m_OnWinMessageReceived;
 
     std::atomic<bool> bInitialized{false};
     std::atomic<bool> bShouldShutdown{false};

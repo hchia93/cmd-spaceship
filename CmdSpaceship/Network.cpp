@@ -81,7 +81,7 @@ void NetworkManager::TaskSend()
                 // Read from Pending GameInput
                 if (auto pendingChar = m_InputManager->GetPendingGameInputToSend())
                 {
-                    std::string key = GetNetStringToken(ENET_INPUT_CHANNEL);
+                    std::string key = GetNetStringToken(INPUT_CHANNEL);
                     key += *pendingChar;
 
                     int result = m_Network->Send(key);
@@ -141,6 +141,14 @@ void NetworkManager::TaskReceive()
                     {
                         m_InputManager->bHasWinner = true;
                         m_InputManager->bLoseFlag = true;
+                        if (m_OnWinMessageReceived)
+                        {
+                            m_OnWinMessageReceived();
+                        }
+                    }
+                    else if (data[1] == '3') // Receive a reset packet
+                    {
+                        m_InputManager->SetRemoteReadyToReset();
                     }
                 }
                 m_LastReceiveTime = currentTime;

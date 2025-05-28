@@ -112,6 +112,7 @@ char GameWorld::GetDisplayCharAt(bool isBodyLocal, bool isBodyRemote,
 GameWorld::GameWorld()
 {
     m_LastFrameTime = std::chrono::steady_clock::now();
+    InitializeConsoleInput();
     CreateSpaceShips();
     InitializeNetwork();
 }
@@ -152,6 +153,12 @@ void GameWorld::InitializeNetwork()
     m_NetworkManager.Initialize();
     if (m_NetworkManager.IsInitialized())
     {
+        // Set up callback for when we receive a win message
+        m_NetworkManager.SetOnWinMessageReceived([this]() 
+        {
+            m_RemoteScore++; // Increment remote score when they hit us
+        });
+
         m_NetworkReceiverThread = std::thread(&NetworkManager::TaskReceive, std::ref(m_NetworkManager));
         m_NetworkSenderThread = std::thread(&NetworkManager::TaskSend, std::ref(m_NetworkManager));
     }
@@ -169,6 +176,58 @@ void GameWorld::FinalizeNetwork()
         m_NetworkReceiverThread.join();
         m_NetworkSenderThread.join();
     }
+}
+
+void GameWorld::RequestReset()
+{
+    bLocalReadyToReset = true;
+    m_NetworkManager.Send("", RESET_CHANNEL);
+}
+
+void GameWorld::HandleResetSync()
+{
+    if (bLocalReadyToReset && m_InputManager.IsRemoteReadyToReset())
+    {
+        // Both players are ready, perform the actual reset
+        bLocalReadyToReset = false;
+        m_InputManager.ClearResetFlags();
+        
+        // Reset game state but keep scores
+        m_InputManager.bHasWinner = false;
+        m_InputManager.bLoseFlag = false;
+
+        // Clear any pending inputs
+        m_InputManager.ClearAllInputs();
+
+        // Reset spaceship positions
+        SpaceShipSpawnParam localSpawnParam;
+        localSpawnParam.netRole = ENetRole::LOCAL;
+        localSpawnParam.spawnLocation = FLocation2D(SCREEN_X_MAX / 2, SCREEN_Y_MAX - 2);
+        localSpawnParam.spawnBulletFunction = std::bind(&BulletPoolService::Request, &m_BulletPoolService);
+
+        SpaceShipSpawnParam remoteSpawnParam;
+        remoteSpawnParam.netRole = ENetRole::REMOTE;
+        remoteSpawnParam.spawnLocation = FLocation2D(SCREEN_X_MAX / 2, 1);
+        remoteSpawnParam.spawnBulletFunction = std::bind(&BulletPoolService::Request, &m_BulletPoolService);
+
+        m_LocalSpaceShip = std::make_unique<Spaceship>(localSpawnParam);
+        m_RemoteSpaceShip = std::make_unique<Spaceship>(remoteSpawnParam);
+
+        // Deactivate all bullets
+        m_BulletPoolService.DeactivateAll();
+    }
+}
+
+void GameWorld::DrawScoreboard()
+{
+    // Draw scoreboard outside game bounds
+    SetCursorInfo(false);
+    SetConsoleColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+    
+    // Draw at the bottom of the screen, below the game area
+    const int scoreboardY = SCREEN_Y_MAX + CONSOLE_MAX_MESSAGE_LINES + 1;
+    SetCursorPostion(0, scoreboardY);
+    printf("Scoreboard: You: %d  Enemy: %d", m_LocalScore, m_RemoteScore);
 }
 
 void GameWorld::Update()
@@ -205,11 +264,28 @@ void GameWorld::Update()
         if (HasBulletHitRemotePlayer())
         {
             m_InputManager.bHasWinner = true;
-            m_NetworkManager.Send("", ENET_WINNER_CHANNEL);
+            m_NetworkManager.Send("", WINNER_CHANNEL);
+            m_LocalScore++; // Increment local score when hitting enemy
         }
+    }
+    else
+    {
+        // Check for reset command when game is over
+        if (_kbhit())
+        {
+            char key = _getch();
+            if (key == 'r' || key == 'R')
+            {
+                RequestReset();
+            }
+        }
+
+        // Check if both players are ready to reset
+        HandleResetSync();
     }
 
     Draw();
+    DrawScoreboard();
 
     if (m_InputManager.bHasWinner)
     {
@@ -219,6 +295,21 @@ void GameWorld::Update()
 
         SetCursorPostion(SCREEN_X_MAX / 2 - (static_cast<int>(message.length()) / 2), SCREEN_Y_MAX / 2);
         std::cout << message;
+        
+        if (bLocalReadyToReset)
+        {
+            // Show waiting message
+            static constexpr std::string_view WaitingMessage = "Waiting for other player...";
+            SetCursorPostion(SCREEN_X_MAX / 2 - (static_cast<int>(WaitingMessage.length()) / 2), SCREEN_Y_MAX / 2 + 1);
+            std::cout << WaitingMessage;
+        }
+        else
+        {
+            // Show reset instruction
+            static constexpr std::string_view ResetMessage = "Press 'R' to play again";
+            SetCursorPostion(SCREEN_X_MAX / 2 - (static_cast<int>(ResetMessage.length()) / 2), SCREEN_Y_MAX / 2 + 1);
+            std::cout << ResetMessage;
+        }
     }
 }
 
@@ -361,11 +452,70 @@ void GameWorld::Exit()
     }
 }
 
+void GameWorld::InitializeConsoleInput()
+{
+    // Get the console input handle
+    m_ConsoleInput = GetStdHandle(STD_INPUT_HANDLE);
+    if (m_ConsoleInput == INVALID_HANDLE_VALUE)
+    {
+        // Handle error
+        return;
+    }
+
+    // Get the current console mode
+    DWORD consoleMode;
+    if (!GetConsoleMode(m_ConsoleInput, &consoleMode))
+    {
+        // Handle error
+        return;
+    }
+
+    // Disable window input (prevents focus events from generating input)
+    // Enable only the input modes we want
+    consoleMode &= ~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
+    consoleMode |= ENABLE_PROCESSED_INPUT;
+
+    if (!SetConsoleMode(m_ConsoleInput, consoleMode))
+    {
+        // Handle error
+        return;
+    }
+}
+
 void GameWorld::HandleLocalInput()
 {
-    if (_kbhit())
+    INPUT_RECORD inputRecord;
+    DWORD numEventsRead;
+
+    // Check if there are any input events
+    if (!GetNumberOfConsoleInputEvents(m_ConsoleInput, &numEventsRead) || numEventsRead == 0)
     {
-        m_InputManager.ReceiveLocalGameInput(_getch());
+        return;
+    }
+
+    // Read console input
+    if (ReadConsoleInput(m_ConsoleInput, &inputRecord, 1, &numEventsRead) && numEventsRead > 0)
+    {
+        // Only process key events
+        if (inputRecord.EventType == KEY_EVENT && inputRecord.Event.KeyEvent.bKeyDown)
+        {
+            char key = static_cast<char>(inputRecord.Event.KeyEvent.uChar.AsciiChar);
+            
+            // Only process valid game inputs
+            switch (key)
+            {
+                case 'a':
+                case 'd':
+                case 'w':
+                case 'q':
+                case 'r':
+                case 'R':
+                    m_InputManager.ReceiveLocalGameInput(key);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     if (auto input = m_InputManager.GetLocalPendingInput())
@@ -382,7 +532,7 @@ void GameWorld::HandleLocalInput()
             case 'w':
                 if (auto* pBullet = m_LocalSpaceShip->Shoot())
                 {
-                    m_NetworkManager.Send(pBullet->GetLocation().ToString(), ENetChannel::ENET_BULLET_CHANNEL);
+                    m_NetworkManager.Send(pBullet->GetLocation().ToString(), ENetChannel::BULLET_CHANNEL);
                 }
                 break;
             case 'q':

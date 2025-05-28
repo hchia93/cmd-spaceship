@@ -3,59 +3,61 @@
 
 static std::mutex InputMutex;
 
+InputManager::InputManager()
+{
+    ClearAllInputs();
+}
+
+void InputManager::ClearAllInputs()
+{
+    std::lock_guard<std::mutex> lock(InputMutex);
+    std::queue<char>().swap(m_PendingGameInputToSend);
+    std::queue<char>().swap(m_PendingLocalGameInput);
+    std::queue<char>().swap(m_PendingRemoteGameInput);
+    std::queue<std::string>().swap(m_coordinateBuffer);
+}
+
 std::optional<char> InputManager::GetPendingGameInputToSend()
 {
-    char result;
-    InputMutex.lock();
-    size_t size = m_PendingGameInputToSend.size();
-    if (size > 0)
+    std::lock_guard<std::mutex> lock(InputMutex);
+    if (!m_PendingGameInputToSend.empty())
     {
-        result = m_PendingGameInputToSend.front();
-    }
-
-    InputMutex.unlock();
-
-    if (size > 0)
-    {
+        char result = m_PendingGameInputToSend.front();
         return result;
     }
-
     return {};
 }
 
 void InputManager::ReceiveRemoteGameInput(char key)
 {
+    std::lock_guard<std::mutex> lock(InputMutex);
     m_PendingRemoteGameInput.push(key);
 }
 
 void InputManager::ReceiveLocalGameInput(char key)
 {
+    std::lock_guard<std::mutex> lock(InputMutex);
     m_PendingLocalGameInput.push(key); // for local.
-
-    InputMutex.lock();
     m_PendingGameInputToSend.push(key); // for remote.
-    InputMutex.unlock();
 }
 
 std::optional<char> InputManager::GetLocalPendingInput()
 {
-    // Local no need muteex
-    char result;
-    if (m_PendingLocalGameInput.size() > 0)
+    std::lock_guard<std::mutex> lock(InputMutex);
+    if (!m_PendingLocalGameInput.empty())
     {
-        result = m_PendingLocalGameInput.front();
+        char result = m_PendingLocalGameInput.front();
         return result;
     }
     return {};
 }
 
-
 std::optional<char> InputManager::GetRemotePendingInput()
 {
-    char result;
-    if (m_PendingRemoteGameInput.size() > 0)
+    std::lock_guard<std::mutex> lock(InputMutex);
+    if (!m_PendingRemoteGameInput.empty())
     {
-        result = m_PendingRemoteGameInput.front();
+        char result = m_PendingRemoteGameInput.front();
         return result;
     }
     return {};
@@ -63,23 +65,31 @@ std::optional<char> InputManager::GetRemotePendingInput()
 
 void InputManager::UpdateLocalInputQueue()
 {
-    m_PendingLocalGameInput.pop();
+    std::lock_guard<std::mutex> lock(InputMutex);
+    if (!m_PendingLocalGameInput.empty())
+    {
+        m_PendingLocalGameInput.pop();
+    }
 }
 
 void InputManager::UpdateRemoteInputQueue()
 {
-    m_PendingRemoteGameInput.pop();
+    std::lock_guard<std::mutex> lock(InputMutex);
+    if (!m_PendingRemoteGameInput.empty())
+    {
+        m_PendingRemoteGameInput.pop();
+    }
 }
 
 void InputManager::ReceiveRemoteCoordinate(std::string_view data)
 {
-    // Remove token!
-    // Make into Location!
+    std::lock_guard<std::mutex> lock(InputMutex);
     m_coordinateBuffer.push(std::string(data));
 }
 
 std::optional<std::string_view> InputManager::GetCoordBuffer()
 {
+    std::lock_guard<std::mutex> lock(InputMutex);
     if (!m_coordinateBuffer.empty())
     {
         return std::string_view(m_coordinateBuffer.front());
@@ -89,6 +99,7 @@ std::optional<std::string_view> InputManager::GetCoordBuffer()
 
 void InputManager::UpdateCoordBufferQueue()
 {
+    std::lock_guard<std::mutex> lock(InputMutex);
     if (!m_coordinateBuffer.empty())
     {
         m_coordinateBuffer.pop();
@@ -97,7 +108,9 @@ void InputManager::UpdateCoordBufferQueue()
 
 void InputManager::UpdatePendingSendGameInputQueue()
 {
-    InputMutex.lock();
-    m_PendingGameInputToSend.pop();
-    InputMutex.unlock();
+    std::lock_guard<std::mutex> lock(InputMutex);
+    if (!m_PendingGameInputToSend.empty())
+    {
+        m_PendingGameInputToSend.pop();
+    }
 }

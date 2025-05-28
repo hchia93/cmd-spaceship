@@ -26,7 +26,7 @@ Bullet* BulletPoolService::Request()
     return nullptr;
 }
 
-Bullet* BulletPoolService::GetActiveBulletAt(FLocation2D location)
+Bullet* BulletPoolService::GetActiveBulletAt(const FLocation2D& location)
 {
     for (std::unique_ptr<Bullet>& element : m_Pool)
     {
@@ -49,5 +49,13 @@ void BulletPoolService::TickAll()
         {
             element.get()->Tick();
         }
+    }
+}
+
+void BulletPoolService::DeactivateAll()
+{
+    for (auto& bullet : m_Pool)
+    {
+        bullet->Deactivate();
     }
 }

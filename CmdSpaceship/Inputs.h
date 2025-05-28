@@ -2,11 +2,13 @@
 #include <queue>
 #include <optional>
 #include <string>
+#include <atomic>
 
 class InputManager
 {
 public:
-
+    InputManager();
+    
     // Helper function to send to network thread.
     std::optional<char> GetPendingGameInputToSend();
     void UpdatePendingSendGameInputQueue();
@@ -24,15 +26,23 @@ public:
     std::optional<std::string_view> GetCoordBuffer();
     void UpdateCoordBufferQueue();
 
+    // Reset synchronization
+    void SetRemoteReadyToReset() { m_bRemoteReadyToReset = true; }
+    bool IsRemoteReadyToReset() const { return m_bRemoteReadyToReset; }
+    void ClearResetFlags() { m_bRemoteReadyToReset = false; }
+
+    // Clear all input queues
+    void ClearAllInputs();
+
     bool bHasWinner = false;
     bool bLoseFlag = false;
 
 private:
-
     std::queue<char> m_PendingGameInputToSend;
     std::queue<char> m_PendingLocalGameInput;
     std::queue<char> m_PendingRemoteGameInput;
-
     std::queue<std::string> m_coordinateBuffer;
+    
+    std::atomic<bool> m_bRemoteReadyToReset{false};
 };
 
