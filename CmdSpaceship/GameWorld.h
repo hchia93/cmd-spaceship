@@ -5,6 +5,8 @@
 #include <memory>
 #include <unordered_map>
 #include <functional>
+#include <chrono>
+#include <atomic>
 
 // Project Headers
 #include "Inputs.h"
@@ -15,8 +17,10 @@
 class GameWorld
 {
 public:
+    static constexpr std::chrono::milliseconds FRAME_TIME{16};  // ~60 FPS
+    
     GameWorld();
-    ~GameWorld() = default;
+    ~GameWorld();
 
     void CreateSpaceShips();
     void Finalize();
@@ -53,6 +57,9 @@ private:
     BulletPoolService m_BulletPoolService;
 
     int m_BufferLineCounter = 0;
-    bool bPendingExit = false;
+    std::atomic<bool> bPendingExit{false};
+    
+    // Frame timing
+    std::chrono::steady_clock::time_point m_LastFrameTime;
 };
 

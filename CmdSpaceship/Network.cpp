@@ -5,6 +5,8 @@
 #include <sstream>
 #include <cassert>
 #include <cstdio>
+#include <chrono>
+#include <thread>
 
 // Project includes
 #include "Inputs.h"
@@ -13,6 +15,8 @@ NetworkManager::NetworkManager()
 {
     SERVER_ONLY(m_Network = std::make_unique<NetworkServer>())
     CLIENT_ONLY(m_Network = std::make_unique<NetworkClient>())
+    m_LastSendTime = std::chrono::steady_clock::now();
+    m_LastReceiveTime = std::chrono::steady_clock::now();
 }
 
 NetworkManager::~NetworkManager()
@@ -67,22 +71,33 @@ void NetworkManager::TaskSend()
         CLIENT_ONLY(netSendLog.open("NetSendLogClient.txt"))
 #endif // DEBUG_LOG_FILE
 
-        while (true)
+        while (!bShouldShutdown)
         {
-            // Read from Pending GameInput
-            if (auto pendingChar = m_InputManager->GetPendingGameInputToSend())
+            auto currentTime = std::chrono::steady_clock::now();
+            auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - m_LastSendTime);
+            
+            if (deltaTime >= NETWORK_UPDATE_INTERVAL)
             {
-                std::string key = GetNetStringToken(ENET_INPUT_CHANNEL);
-                key += *pendingChar;
-
-                int result = m_Network->Send(key);
-#if DEBUG_LOG_FILE
-                netSendLog.write(key.c_str(), key.length());
-#endif // DEBUG_LOG_FILE
-                if (result > 0)
+                // Read from Pending GameInput
+                if (auto pendingChar = m_InputManager->GetPendingGameInputToSend())
                 {
-                    m_InputManager->UpdatePendingSendGameInputQueue();
+                    std::string key = GetNetStringToken(ENET_INPUT_CHANNEL);
+                    key += *pendingChar;
+
+                    int result = m_Network->Send(key);
+#if DEBUG_LOG_FILE
+                    netSendLog.write(key.c_str(), key.length());
+#endif // DEBUG_LOG_FILE
+                    if (result > 0)
+                    {
+                        m_InputManager->UpdatePendingSendGameInputQueue();
+                    }
                 }
+                m_LastSendTime = currentTime;
+            }
+            else
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }
@@ -100,28 +115,39 @@ void NetworkManager::TaskReceive()
         CLIENT_ONLY(netRecvLog.open("NetRecvLogClient.txt"))
 #endif//DEBUG_LOG_FILE
 
-        while (true)
+        while (!bShouldShutdown)
         {
-            int result = m_Network->Receive(data);
-            if (result > 0)
+            auto currentTime = std::chrono::steady_clock::now();
+            auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - m_LastReceiveTime);
+            
+            if (deltaTime >= NETWORK_UPDATE_INTERVAL)
             {
+                int result = m_Network->Receive(data);
+                if (result > 0)
+                {
 #if DEBUG_LOG_FILE
-                netRecvLog.write(data.c_str(), data.length());
+                    netRecvLog.write(data.c_str(), data.length());
 #endif //DEBUG_LOG_FILE
-                // INPUT CHANNEL
-                if (data[1] == '0')
-                {
-                    m_InputManager->ReceiveRemoteGameInput(data[3]);
+                    // INPUT CHANNEL
+                    if (data[1] == '0')
+                    {
+                        m_InputManager->ReceiveRemoteGameInput(data[3]);
+                    }
+                    else if (data[1] == '1')
+                    {
+                        m_InputManager->ReceiveRemoteCoordinate(data);
+                    }
+                    else if (data[1] == '2') // Receive a win packet
+                    {
+                        m_InputManager->bHasWinner = true;
+                        m_InputManager->bLoseFlag = true;
+                    }
                 }
-                else if (data[1] == '1')
-                {
-                    m_InputManager->ReceiveRemoteCoordinate(data);
-                }
-                else if (data[1] == '2') // Receive a win packet
-                {
-                    m_InputManager->bHasWinner = true;
-                    m_InputManager->bLoseFlag = true;
-                }
+                m_LastReceiveTime = currentTime;
+            }
+            else
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

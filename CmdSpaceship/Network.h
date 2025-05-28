@@ -6,6 +6,8 @@
 #include <windows.h>
 #include <string>
 #include <string_view>
+#include <chrono>
+#include <atomic>
 
 #include "Macro.h"
 #include "Utils.h"
@@ -38,6 +40,8 @@ enum ENetChannel
 class NetworkManager
 {
 public:
+    static constexpr std::chrono::milliseconds NETWORK_UPDATE_INTERVAL{5}; // 200Hz network update rate
+    
     NetworkManager();
     ~NetworkManager();
 
@@ -50,6 +54,7 @@ public:
 
     NetworkCommon* GetNetwork() { return m_Network.get(); }
     const bool IsInitialized() { return bInitialized; }
+    void RequestShutdown() { bShouldShutdown = true; }
 
 private:
     static std::string GetNetStringToken(ENetChannel NetChannel);
@@ -57,7 +62,11 @@ private:
     std::unique_ptr<NetworkCommon> m_Network;
     InputManager* m_InputManager;
 
-    bool bInitialized = false;
+    std::atomic<bool> bInitialized{false};
+    std::atomic<bool> bShouldShutdown{false};
+
+    std::chrono::steady_clock::time_point m_LastSendTime;
+    std::chrono::steady_clock::time_point m_LastReceiveTime;
 
 #if DEBUG_LOG_FILE
     std::ofstream netSendLog;

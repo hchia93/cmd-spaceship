@@ -9,6 +9,8 @@
 #include <iostream>
 #include <string>
 #include <array>
+#include <chrono>
+#include <thread>
 
 // Project Headers
 #include "GameWorld.h"
@@ -107,8 +109,15 @@ char GameWorld::GetDisplayCharAt(bool isBodyLocal, bool isBodyRemote,
 
 GameWorld::GameWorld()
 {
+    m_LastFrameTime = std::chrono::steady_clock::now();
     CreateSpaceShips();
     InitializeNetwork();
+}
+
+GameWorld::~GameWorld()
+{
+    Exit();
+    Finalize();
 }
 
 void GameWorld::CreateSpaceShips()
@@ -154,6 +163,7 @@ void GameWorld::FinalizeNetwork()
 {
     if (m_NetworkManager.IsInitialized())
     {
+        m_NetworkManager.RequestShutdown();
         m_NetworkReceiverThread.join();
         m_NetworkSenderThread.join();
     }
@@ -165,6 +175,21 @@ void GameWorld::Update()
     {
         return;
     }
+
+    // Calculate frame timing
+    auto currentTime = std::chrono::steady_clock::now();
+    auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - m_LastFrameTime);
+    
+    // If we're running faster than our target frame rate, wait
+    if (deltaTime < FRAME_TIME)
+    {
+        auto sleepTime = FRAME_TIME - deltaTime;
+        std::this_thread::sleep_for(sleepTime);
+        currentTime = std::chrono::steady_clock::now();
+        deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - m_LastFrameTime);
+    }
+    
+    m_LastFrameTime = currentTime;
 
     if (!m_InputManager.bHasWinner)
     {
@@ -190,8 +215,6 @@ void GameWorld::Update()
         SetCursorPostion(SCREEN_X_MAX / 2 - (static_cast<int>(message.length()) / 2), SCREEN_Y_MAX / 2);
         std::cout << message;
     }
-
-    Sleep(20);
 }
 
 void GameWorld::Draw()
@@ -321,6 +344,10 @@ bool GameWorld::IsABullet(const int row, const int col, const ENetRole netRole)
 void GameWorld::Exit()
 {
     bPendingExit = true;
+    if (m_NetworkManager.IsInitialized())
+    {
+        m_NetworkManager.RequestShutdown();
+    }
 }
 
 void GameWorld::HandleLocalInput()
