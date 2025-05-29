@@ -14,7 +14,8 @@ The code is evolved from a course material from Parallel Processing course in [M
 
 ### Gameplay
 `A` and `D` to move horizontally, `W` to shoot.
-Press `R` to continue after one of the spaceship is defeated
+
+Press `R` to continue after one of the spaceship is defeated.
 
 ## Roadmap
 ### Issue
