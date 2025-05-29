@@ -13,9 +13,13 @@ The code is evolved from a course material from Parallel Processing course in [M
 > Alternatively, run `Server` in VisualStudio, detach the process, then runs `Client`.
 
 ### Gameplay
-`A` and `D` to move horizontally, W to shoot.
+`A` and `D` to move horizontally, `W` to shoot.
+Press `R` to continue after one of the spaceship is defeated
 
 ## Roadmap
+### Issue
+- Input queue is not clean on start of every round / on Window regain focus.
+
 ### 2025 - Done
 - Make proper solution for a old-school school project. 
 - Encapsulate logic and responsibility to each of their class.
