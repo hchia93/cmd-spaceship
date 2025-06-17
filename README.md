@@ -6,13 +6,15 @@ The code is evolved from a course material from Parallel Processing course in [M
 
 ![Watch the preview](cmd-spaceship-3.gif)
 
-## Instruction
-### Running the Application
-1. Build both executable.
-2. Run server application first, then client.
-> Alternatively, run `Server` in VisualStudio, detach the process, then runs `Client`.
+## Building Executables
+- Build for `ServerBuild`
+- Build for `ClientBuild`
+- You can locate both build under ..\src\CmdSpaceship\x64
 
-### Gameplay
+## Running the Application
+- Run the server executable, then run the client executable.
+
+## Gameplay Instruction
 - `A` and `D` to move horizontally, `W` to shoot.
 - Press `R` to continue after one of the spaceship is defeated.
 
