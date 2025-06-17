@@ -13,27 +13,9 @@ The code is evolved from a course material from Parallel Processing course in [M
 > Alternatively, run `Server` in VisualStudio, detach the process, then runs `Client`.
 
 ### Gameplay
-`A` and `D` to move horizontally, `W` to shoot.
-
-Press `R` to continue after one of the spaceship is defeated.
-
-## Roadmap
-### Issue
-- Input queue is not clean on start of every round / on Window regain focus.
-
-### 2025 - Done
-- Make proper solution for a old-school school project. 
-- Encapsulate logic and responsibility to each of their class.
-- Update coding standard to cpp17. 
-- Updated ReadMe.md and added fancy preview.
-- Fix code, and refactoring with vibe coding. (Still a bit manual coding before the codebase reaching vibe-able.)
+- `A` and `D` to move horizontally, `W` to shoot.
+- Press `R` to continue after one of the spaceship is defeated.
 
 ## Reference
-The winsock2 part I take references from :	
-
-https://docs.microsoft.com/en-us/windows/win32/winsock/complete-server-code
-
-https://docs.microsoft.com/en-us/windows/win32/winsock/complete-client-code
-
-## Authors
-[@hchia93](https://www.github.com/hchia93)
+- [winsock2(server)](https://docs.microsoft.com/en-us/windows/win32/winsock/complete-server-code)
+- [winsock2(client)](https://docs.microsoft.com/en-us/windows/win32/winsock/complete-client-code)
