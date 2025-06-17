@@ -28,6 +28,6 @@
 *.app
 
 # Directories
-/CmdSpaceship/.vs
-/CmdSpaceship/x64
-/CmdSpaceship/CmdSpaceship
+/src/.vs
+/src/x64
+/src/CmdSpaceship
