@@ -7,11 +7,10 @@ Originally based on a parallel processing coursework project (2015, Multimedia U
 
 ## ✨ Features
 
-- **Modern C++ Rewrite** – Clean, maintainable codebase using RAII and STL instead of raw pthreads.
-- **Client–Server Architecture** – Powered by Winsock2 with separate server and client builds.
-- **Cross-Platform Heritage** – The original Linux pthreads version has been ported and modernized for Windows.
-- **Minimalist Gameplay** – Runs directly in the command prompt for a nostalgic ASCII-game experience.
-- **Fast Iteration Demo** – Compact codebase suitable for learning and extending.
+- **Modern C++ Rewrite** : Clean, maintainable codebase using RAII and STL instead of raw pthreads.
+- **Client–Server Architecture** : Powered by Winsock2 with separate server and client builds.
+- **Cross-Platform Heritage** : The original Linux pthreads version has been ported and modernized for Windows.
+- **LiteWeight** : Runs directly in the command prompt for a nostalgic ASCII-game experience.
 
 ![Preview](cmd-spaceship.gif)
 
