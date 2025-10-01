@@ -49,12 +49,14 @@ Open the generated solution located at:
 /generated-vs/cmd-spaceship.sln
 ```
 
-> ⚠️ Note: Ensure the start-up project is cmd-spaceship
+> ⚠️ Ensure the start-up project is `cmd-spaceship-client` or  `cmd-spaceship-server` during build or debug.
 
 ## ▶️ Running
 
-1. Start the **server executable**. If you launching from Visual Studio, kindly detach and launch client next.
+1. Start the **server executable**. 
 2. Run **client executables** to connect and play.
+
+> ⚠️ If you launching from Visual Studio, kindly detach, reselect start up project, and relaunch.
 
 ## 🎮 Controls
 

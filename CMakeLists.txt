@@ -4,11 +4,8 @@ project(cmd-spaceship LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Force custom configuration types (for multi-config generators like Visual Studio)
-set(CMAKE_CONFIGURATION_TYPES "ClientDebug;ClientRelease;ServerDebug;ServerRelease" CACHE STRING "" FORCE)
-
-# Output dir
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cmd-spaceship)
+# Only keep Debug and Release
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
 # Sources
 set(SOURCES
@@ -33,21 +30,18 @@ set(HEADERS
     src/Utils.h
 )
 
-# Define one target
-add_executable(cmd-spaceship ${SOURCES} ${HEADERS})
+# Client target
+add_executable(cmd-spaceship-client ${SOURCES} ${HEADERS})
+target_compile_definitions(cmd-spaceship-client PRIVATE CLIENT_BUILD)
 
-# Apply definitions depending on configuration
-target_compile_definitions(cmd-spaceship PRIVATE
-    $<$<CONFIG:ClientDebug>:CLIENT_BUILD;DEBUG>
-    $<$<CONFIG:ClientRelease>:CLIENT_BUILD;NDEBUG>
-    $<$<CONFIG:ServerDebug>:SERVER_BUILD;DEBUG>
-    $<$<CONFIG:ServerRelease>:SERVER_BUILD;NDEBUG>
+# Server target
+add_executable(cmd-spaceship-server ${SOURCES} ${HEADERS})
+target_compile_definitions(cmd-spaceship-server PRIVATE SERVER_BUILD)
+
+# Output path
+set_target_properties(cmd-spaceship-client PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cmd-spaceship
 )
-
-# Optional: optimization flags
-target_compile_options(cmd-spaceship PRIVATE
-    $<$<CONFIG:ClientDebug>:/Od>
-    $<$<CONFIG:ServerDebug>:/Od>
-    $<$<CONFIG:ClientRelease>:/O2>
-    $<$<CONFIG:ServerRelease>:/O2>
+set_target_properties(cmd-spaceship-server PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cmd-spaceship
 )
