@@ -40,7 +40,7 @@ The solution will be generated in
 /generated-vs/
 ```
 
-### Step 2: Build and Run
+### Step 2: Build Solutions
 
 Open the generated solution located at:
 
@@ -50,14 +50,14 @@ Open the generated solution located at:
 
 > ⚠️ Ensure the start-up project is `cmd-spaceship-client` or  `cmd-spaceship-server` during build or debug.
 
-## ▶️ Running
+### Step 3: Runs Executables 
 
 1. Start the **server executable**. 
 2. Run **client executables** to connect and play.
 
 > ⚠️ If you launching from Visual Studio, kindly detach, reselect start up project, and relaunch.
 
-## 🎮 Controls
+## Game Controls
 
 - `A` / `D` → Move left / right  
 - `W` → Shoot  
