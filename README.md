@@ -1,6 +1,6 @@
 # cmd-spaceship
 
-![Build](https://github.com/hchia93/cmd-spaceship/actions/workflows/build.yml/badge.svg)
+![Build Status](https://github.com/hchia93/cmd-spaceship/actions/workflows/build.yml/badge.svg)
 
 **cmd-spaceship** is a retro-inspired **command-line multiplayer shooter** built with modern `C++` and `Winsock2`.  
 Originally based on a parallel processing coursework project (2015, Multimedia University), it has since been **rewritten from scratch** with contemporary coding practices and improved networking support, such as pooling implementation.
