@@ -1,33 +1,12 @@
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# CMake build dirs
+/generated-vs/
+/build/
+/CMakeFiles/
+/CMakeCache.txt
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Log files
-*.txt
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# Directories
-/src/.vs
-/src/x64
-/src/CmdSpaceship
+# VS user files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+.vscode/

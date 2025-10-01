@@ -1,0 +1,35 @@
+name: Build cmd-spaceship
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure CMake
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build (Release)
+        run: cmake --build build --config Release
+
+      - name: Build (Debug)
+        run: cmake --build build --config Debug
+
+      - name: Upload Release binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmd-spaceship-binaries
+          path: |
+            build/cmd-spaceship/Release/*.exe
+            build/cmd-spaceship/Debug/*.exe
