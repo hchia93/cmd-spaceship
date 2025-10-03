@@ -5,14 +5,17 @@
 **cmd-spaceship** is a retro-inspired **command-line multiplayer shooter** built with modern `C++` and `Winsock2`.  
 Originally based on a parallel processing coursework project (2015, Multimedia University), it has since been **rewritten from scratch** with contemporary coding practices and improved networking support, such as pooling implementation.
 
+<p align="center">
+  <img src="cmd-spaceship.gif" width="1000">
+</p>
+
 ## ✨ Features
 
 - **Modern C++ Rewrite** : Clean, maintainable codebase using RAII and STL instead of raw pthreads.
 - **Client–Server Architecture** : Powered by Winsock2 with separate server and client builds.
 - **Cross-Platform Heritage** : The original Linux pthreads version has been ported and modernized for Windows.
 - **LiteWeight** : Runs directly in the command prompt for a nostalgic ASCII-game experience.
-
-![Preview](cmd-spaceship.gif)
+- **Mini Game Loop** : Contains win-lose and scoring, and game is resettable.
 
 ## Project Structure
 ```bash
@@ -24,7 +27,7 @@ cmd-spaceship/
 └── generated-vs/          # Generated Visual Studio solution
 ```
 
-## Running the Project
+## Project Setup
 
 ### Step 1: Generate Solution
 
@@ -57,7 +60,9 @@ Open the generated solution located at:
 
 > ⚠️ If you launching from Visual Studio, kindly detach, reselect start up project, and relaunch.
 
-## Game Controls
+## Running Project
+
+### Game Controls
 
 - `A` / `D` → Move left / right  
 - `W` → Shoot  
